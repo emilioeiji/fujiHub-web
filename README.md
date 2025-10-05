@@ -24,8 +24,6 @@ git clone git@github.com:emilioeiji/fujiHub-web.git
 cd fujiHub/web
 ```
 
-````
-
 ### 2. Instale as dependências
 
 ```bash
@@ -93,9 +91,3 @@ web/
 ## 📜 Licença
 
 Este projeto é de uso interno do **FujiHub**.
-
-```
-
----
-```
-````
