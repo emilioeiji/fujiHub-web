@@ -1,0 +1,93 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --fuji-red: #FB0020;
+  --fuji-red-dark: #d9001c;
+  --bg-light: #ffffff;
+  --text-dark: #0f0f0f;
+  --text-muted: #666;
+  --input-bg: #f9f9f9;
+  --input-border: #ccc;
+}
+
+.login-container {
+  display: flex;
+  align-items: center;      /* centraliza vertical */
+  justify-content: center;  /* centraliza horizontal */
+  width: 100%;              /* ocupa toda a largura */
+  height: 100%;             /* ocupa toda a altura */
+  background-color: var(--bg-light);
+  padding: 24px;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  padding: 48px 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  width: 100%;
+  max-width: 420px; /* largura máxima do card */
+}
+
+.login-logo {
+  width: 160px; /* logo maior */
+  height: auto;
+  margin-bottom: 32px;
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 24px;
+}
+
+.login-input {
+  width: 100%;
+  background-color: var(--input-bg);
+  color: var(--text-dark);
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  border: 1px solid var(--input-border);
+  font-size: 16px;
+  outline: none;
+  transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.login-input::placeholder {
+  color: var(--text-muted);
+}
+
+.login-input:focus {
+  border-color: var(--fuji-red);
+  box-shadow: 0 0 0 2px rgba(251, 0, 32, 0.2);
+}
+
+.login-button {
+  width: 100%;
+  background-color: var(--fuji-red);
+  color: #fff;
+  font-weight: bold;
+  font-size: 16px;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out, transform 0.1s ease-in-out;
+}
+
+.login-button:hover {
+  background-color: var(--fuji-red-dark);
+}
+
+.login-button:active {
+  transform: scale(0.98);
+}
