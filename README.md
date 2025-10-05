@@ -1,16 +1,101 @@
-# React + Vite
+# 🎨 FujiHub Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este é o **frontend do FujiHub**, desenvolvido em **React + Vite**, responsável pela interface web que consome a API do backend (Django REST Framework).  
+O projeto foi estruturado para oferecer **rapidez, modularidade e integração fluida** com o backend.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Tecnologias
 
-## React Compiler
+- [React 18](https://react.dev/)
+- [Vite](https://vitejs.dev/) para build e dev server
+- [React Router](https://reactrouter.com/) para navegação SPA
+- [Axios ou Fetch API](https://axios-http.com/) para comunicação com o backend
+- [CSS Modules / Tailwind / Styled Components] (dependendo do que você escolher) para estilização
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## ⚙️ Configuração do ambiente
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 1. Clone o repositório
+
+```bash
+git clone git@github.com:emilioeiji/fujiHub-web.git
+cd fujiHub/web
+```
+
+````
+
+### 2. Instale as dependências
+
+```bash
+npm install
+```
+
+### 3. Execute o servidor de desenvolvimento
+
+```bash
+npm run dev
+```
+
+O frontend estará disponível em:
+👉 `http://127.0.0.1:5173`
+
+---
+
+## 📡 Integração com o Backend
+
+- O backend roda em `http://127.0.0.1:8000`
+- O frontend consome os endpoints da API, por exemplo:
+  - `POST /api/token/` → login (JWT)
+  - `GET /api/profile/` → dados do usuário autenticado
+
+⚠️ Certifique-se de que o **CORS** está habilitado no backend para permitir chamadas do frontend.
+
+---
+
+## 🗂️ Estrutura de pastas
+
+```
+web/
+├── public/          # Arquivos estáticos
+├── src/
+│   ├── assets/      # Imagens, ícones, fontes
+│   ├── components/  # Componentes reutilizáveis
+│   ├── pages/       # Páginas principais
+│   ├── services/    # Comunicação com API
+│   ├── styles/      # Estilos globais
+│   └── main.jsx     # Ponto de entrada
+├── index.html
+├── package.json
+└── README.md
+```
+
+---
+
+## 🧪 Scripts úteis
+
+- `npm run dev` → inicia o servidor de desenvolvimento
+- `npm run build` → gera versão de produção
+- `npm run preview` → pré-visualiza o build localmente
+
+---
+
+## 🎯 Roadmap
+
+- [ ] Integração completa com autenticação JWT
+- [ ] Dashboard inicial conectado ao backend
+- [ ] Tema visual unificado com branding FujiHub
+- [ ] Deploy integrado (Netlify/Vercel ou via Django static)
+
+---
+
+## 📜 Licença
+
+Este projeto é de uso interno do **FujiHub**.
+
+```
+
+---
+```
+````
