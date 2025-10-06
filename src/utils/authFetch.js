@@ -35,3 +35,9 @@ export async function authFetch(url, options = {}) {
 
   return res;
 }
+
+export async function authFetchJson(url, options = {}) {
+  const res = await authFetch(url, options);
+  const data = await res.json();
+  return { ok: res.ok, data };
+}

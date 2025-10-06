@@ -1,0 +1,27 @@
+.dashboard-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #f5f7fa;
+  border-radius: 12px;
+  font-family: 'Inter', sans-serif;
+}
+
+.dashboard-title {
+  text-align: center;
+  color: #3f51b5;
+  margin-bottom: 2rem;
+}
+
+.dashboard-section {
+  background: #fff;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.05);
+}
+
+.dashboard-section h2 {
+  color: #3f51b5;
+  margin-bottom: 1rem;
+}

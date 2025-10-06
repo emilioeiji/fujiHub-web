@@ -1,25 +1,39 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
-import Dashboard from './pages/Dashboard';
-import Login from './pages/Login';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { NavigationContainer } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-function PrivateRoute({ children }) {
-  const access = localStorage.getItem('access');
-  return access ? children : <Navigate to="/login" replace />;
-}
+import DashboardScreen from './src/screens/DashboardScreen';
+import EmployeesScreen from './src/screens/EmployeesScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+
+const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/dashboard"
-        element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ color, size }) => {
+            let iconName;
+
+            if (route.name === 'Dashboard') {
+              iconName = 'home-outline';
+            } else if (route.name === 'Funcionários') {
+              iconName = 'people-outline';
+            } else if (route.name === 'Configurações') {
+              iconName = 'settings-outline';
+            }
+
+            return <Icon name={iconName} size={size} color={color} />;
+          },
+          tabBarActiveTintColor: '#0078d7',
+          tabBarInactiveTintColor: 'gray',
+        })}
+      >
+        <Tab.Screen name="Dashboard" component={DashboardScreen} />
+        <Tab.Screen name="Funcionários" component={EmployeesScreen} />
+        <Tab.Screen name="Configurações" component={SettingsScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
