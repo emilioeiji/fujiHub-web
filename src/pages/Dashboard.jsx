@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import LanguageSelector from '../components/LanguageSelector';
 import { authFetch } from '../utils/authFetch';
 import './Dashboard.css';
 
@@ -15,6 +17,12 @@ const modules = [
     description: 'Cadastro de itens, solicitações e workflow de entrega de uniformes.',
     status: 'Inicial',
     to: '/inventory/items',
+  },
+  {
+    title: 'Atendimento médico',
+    description: 'Solicitações internas, triagem e acompanhamento operacional de saúde.',
+    status: 'Inicial',
+    to: '/medical/requests',
   },
   {
     title: 'Escalas e operações',
@@ -41,8 +49,9 @@ const indicators = [
 ];
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
-  const [profileStatus, setProfileStatus] = useState('Carregando sessão');
+  const [profileStatus, setProfileStatus] = useState(t('dashboard.loadingSession'));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,7 +60,7 @@ export default function Dashboard() {
 
       if (res.ok) {
         setProfile(await res.json());
-        setProfileStatus('Sessão ativa');
+        setProfileStatus(t('dashboard.sessionActive'));
         return;
       }
 
@@ -60,7 +69,7 @@ export default function Dashboard() {
         return;
       }
 
-      setProfileStatus('Sessão local ativa');
+      setProfileStatus(t('dashboard.sessionLocal'));
     })();
   }, [navigate]);
 
@@ -76,33 +85,34 @@ export default function Dashboard() {
           <span className="erp-brand-mark">FH</span>
           <div>
             <strong>FujiHub</strong>
-            <span>ERP Operacional</span>
+            <span>{t('app.tagline')}</span>
           </div>
         </div>
 
         <nav className="erp-nav">
-          <Link className="erp-nav-link active" to="/dashboard">Dashboard</Link>
-          <Link className="erp-nav-link" to="/employees">Funcionários</Link>
-          <Link className="erp-nav-link" to="/inventory/items">Uniformes</Link>
-          <span className="erp-nav-link disabled">Escalas</span>
-          <span className="erp-nav-link disabled">Relatórios</span>
+          <Link className="erp-nav-link active" to="/dashboard">{t('nav.dashboard')}</Link>
+          <Link className="erp-nav-link" to="/employees">{t('nav.employees')}</Link>
+          <Link className="erp-nav-link" to="/inventory/items">{t('nav.inventory')}</Link>
+          <Link className="erp-nav-link" to="/medical/requests">{t('nav.medical')}</Link>
+          <span className="erp-nav-link disabled">{t('nav.operations')}</span>
         </nav>
       </aside>
 
       <main className="erp-main">
         <header className="erp-header">
           <div>
-            <p className="erp-eyebrow">Painel inicial</p>
-            <h1>Controle geral dos operadores</h1>
+            <p className="erp-eyebrow">{t('dashboard.eyebrow')}</p>
+            <h1>{t('dashboard.title')}</h1>
             <p className="erp-subtitle">
-              Visão central para acompanhar cadastros, operação e próximos módulos do ERP.
+              {t('dashboard.subtitle')}
             </p>
           </div>
 
           <div className="erp-session">
             <span>{profileStatus}</span>
-            <strong>{profile?.username || 'Usuário logado'}</strong>
-            <button type="button" onClick={handleLogout}>Sair</button>
+            <strong>{profile?.username || t('dashboard.loggedUser')}</strong>
+            <LanguageSelector compact />
+            <button type="button" onClick={handleLogout}>{t('nav.logout')}</button>
           </div>
         </header>
 
@@ -120,10 +130,10 @@ export default function Dashboard() {
           <div className="erp-panel erp-panel-large">
             <div className="erp-panel-header">
               <div>
-                <p className="erp-eyebrow">Próximo passo</p>
-                <h2>Cadastro master de funcionários</h2>
+                <p className="erp-eyebrow">{t('dashboard.nextStep')}</p>
+                <h2>{t('dashboard.employeeMaster')}</h2>
               </div>
-              <Link className="erp-primary-action" to="/employees">Abrir cadastro</Link>
+              <Link className="erp-primary-action" to="/employees">{t('nav.employees')}</Link>
             </div>
             <p>
               O primeiro módulo ativo concentra o cadastro base dos operadores. Ele será a fonte
@@ -148,8 +158,8 @@ export default function Dashboard() {
           <div className="erp-panel">
             <div className="erp-panel-header compact">
               <div>
-                <p className="erp-eyebrow">Módulos</p>
-                <h2>Mapa do ERP</h2>
+                <p className="erp-eyebrow">{t('dashboard.modules')}</p>
+                <h2>{t('dashboard.erpMap')}</h2>
               </div>
             </div>
             <div className="erp-module-list">

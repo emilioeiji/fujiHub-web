@@ -1,10 +1,13 @@
 // src/pages/EmployeeDashboard.jsx
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import LanguageSelector from '../components/LanguageSelector';
 import './EmployeeDashboard.css';
 import EmployeeForm from './EmployeeForm';
 import EmployeeList from './EmployeeList';
 
 export default function EmployeeDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -19,33 +22,33 @@ export default function EmployeeDashboard() {
           <span className="master-brand-mark">FH</span>
           <div>
             <strong>FujiHub</strong>
-            <span>ERP Operacional</span>
+            <span>{t('app.tagline')}</span>
           </div>
         </div>
 
         <nav className="master-nav">
-          <Link className="master-nav-link" to="/dashboard">Dashboard</Link>
-          <Link className="master-nav-link active" to="/employees">Funcionários</Link>
-          <Link className="master-nav-link" to="/inventory/items">Uniformes</Link>
-          <span className="master-nav-link disabled">Escalas</span>
-          <span className="master-nav-link disabled">Relatórios</span>
+          <Link className="master-nav-link" to="/dashboard">{t('nav.dashboard')}</Link>
+          <Link className="master-nav-link active" to="/employees">{t('nav.employees')}</Link>
+          <Link className="master-nav-link" to="/inventory/items">{t('nav.inventory')}</Link>
+          <Link className="master-nav-link" to="/medical/requests">{t('nav.medical')}</Link>
+          <span className="master-nav-link disabled">{t('nav.operations')}</span>
         </nav>
       </aside>
 
       <main className="master-main">
         <header className="master-header">
           <div>
-            <p className="master-eyebrow">Módulo master</p>
-            <h1>Cadastro master de funcionários</h1>
+            <p className="master-eyebrow">{t('employees.module')}</p>
+            <h1>{t('employees.title')}</h1>
             <p>
-              Base central para registrar operadores, dados contratuais, alocação, controle financeiro
-              e informações usadas pelos próximos módulos do ERP.
+              {t('employees.subtitle')}
             </p>
           </div>
 
           <div className="master-actions">
-            <Link to="/dashboard">Voltar ao dashboard</Link>
-            <button type="button" onClick={handleLogout}>Sair</button>
+            <Link to="/dashboard">{t('nav.backDashboard')}</Link>
+            <LanguageSelector compact />
+            <button type="button" onClick={handleLogout}>{t('nav.logout')}</button>
           </div>
         </header>
 

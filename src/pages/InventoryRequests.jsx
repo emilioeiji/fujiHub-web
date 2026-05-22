@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { authFetch } from '../utils/authFetch';
 import InventoryLayout from './InventoryLayout';
 
@@ -9,6 +10,7 @@ function getEmptyRequest() {
     employee: '',
     item: '',
     quantity: 1,
+    request_type: 'donation',
     reason: '',
     request_date: new Date().toISOString().slice(0, 10),
     notes: '',
@@ -21,6 +23,11 @@ const statusLabels = {
   separated: 'Separado',
   delivered: 'Entregue',
   cancelled: 'Cancelado',
+};
+
+const requestTypeLabels = {
+  donation: 'Doação',
+  purchase: 'Compra',
 };
 
 function normalizeList(data) {
@@ -67,6 +74,7 @@ function canRunAction(status, action) {
 }
 
 export default function InventoryRequests() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState([]);
   const [items, setItems] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -135,6 +143,7 @@ export default function InventoryRequests() {
 
     const payload = {
       employee: form.employee,
+      request_type: form.request_type,
       reason: form.reason,
       request_date: form.request_date,
       notes: form.notes,
@@ -189,11 +198,15 @@ export default function InventoryRequests() {
   };
 
   const isSubmitDisabled = submitting || loading || employees.length === 0 || items.length === 0;
+  const selectedItem = items.find((item) => String(item.id) === String(form.item));
+  const estimatedTotal = selectedItem
+    ? Number(selectedItem.unit_cost || 0) * Number(form.quantity || 0)
+    : 0;
 
   return (
     <InventoryLayout
-      title="Solicitações de uniformes"
-      subtitle="Fluxo inicial para solicitar, aprovar, separar, entregar ou cancelar pedidos de uniforme."
+      title={t('inventory.requestsTitle')}
+      subtitle={t('inventory.requestsSubtitle')}
       summary={summary}
     >
       <section className="inventory-workspace">
@@ -223,12 +236,21 @@ export default function InventoryRequests() {
               </label>
 
               <label className="inventory-field">
+                <span>Tipo</span>
+                <select name="request_type" value={form.request_type} onChange={updateField}>
+                  {Object.entries(requestTypeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="inventory-field">
                 <span>Item</span>
                 <select name="item" value={form.item} onChange={updateField} required>
                   <option value="">Selecione</option>
                   {items.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.sku} - {item.name} / {item.size}
+                      {item.sku} - {item.name} / {item.size} - {item.unit_cost}
                     </option>
                   ))}
                 </select>
@@ -258,8 +280,21 @@ export default function InventoryRequests() {
 
               <label className="inventory-field">
                 <span>Motivo</span>
-                <input name="reason" value={form.reason} onChange={updateField} required />
+                <input
+                  name="reason"
+                  value={form.reason}
+                  onChange={updateField}
+                  required={form.request_type === 'donation'}
+                />
               </label>
+
+              <div className="inventory-cost-preview">
+                <span>Custo estimado</span>
+                <strong>{estimatedTotal.toFixed(2)}</strong>
+                <small>
+                  {selectedItem ? `${selectedItem.unit_cost} x ${form.quantity || 0}` : 'Selecione um item'}
+                </small>
+              </div>
 
               <label className="inventory-field full">
                 <span>Observações</span>
@@ -277,7 +312,7 @@ export default function InventoryRequests() {
                 Limpar
               </button>
               <button className="inventory-primary-button" type="submit" disabled={isSubmitDisabled}>
-                {submitting ? 'Criando...' : 'Criar solicitação'}
+                {submitting ? t('common.creating') : t('inventory.createRequest')}
               </button>
             </div>
           </form>
@@ -296,7 +331,7 @@ export default function InventoryRequests() {
                 disabled={loading}
                 onClick={loadData}
               >
-                {loading ? 'Atualizando...' : 'Atualizar lista'}
+                {loading ? t('common.refreshing') : t('common.refresh')}
               </button>
               <span className="inventory-status">{loading ? '...' : requests.length}</span>
             </div>
@@ -313,7 +348,9 @@ export default function InventoryRequests() {
                   <tr>
                     <th>ID</th>
                     <th>Funcionário</th>
+                    <th>Tipo</th>
                     <th>Itens</th>
+                    <th>Total</th>
                     <th>Status</th>
                     <th>Ações</th>
                   </tr>
@@ -329,13 +366,19 @@ export default function InventoryRequests() {
                           {employeeMap[request.employee] || 'Funcionário'}
                         </span>
                       </td>
+                      <td>{requestTypeLabels[request.request_type] || request.request_type}</td>
                       <td>
                         {request.items?.map((requestItem) => (
                           <div key={requestItem.id || requestItem.item}>
                             {requestItem.item_detail?.sku || requestItem.item} x {requestItem.quantity}
+                            <br />
+                            <span className="inventory-muted">
+                              {requestItem.unit_cost_snapshot} / {requestItem.total_cost}
+                            </span>
                           </div>
                         ))}
                       </td>
+                      <td>{request.total_cost}</td>
                       <td>
                         <span className={`inventory-badge status-${request.status}`}>
                           {statusLabels[request.status] || request.status}
@@ -349,7 +392,7 @@ export default function InventoryRequests() {
                             disabled={!canRunAction(request.status, 'approve') || Boolean(actioning)}
                             onClick={() => runAction(request.id, 'approve')}
                           >
-                            {actioning === `${request.id}-approve` ? 'Aprovando...' : 'Aprovar'}
+                            {actioning === `${request.id}-approve` ? `${t('inventory.approve')}...` : t('inventory.approve')}
                           </button>
                           <button
                             className="inventory-small-button"
@@ -357,7 +400,7 @@ export default function InventoryRequests() {
                             disabled={!canRunAction(request.status, 'separate') || Boolean(actioning)}
                             onClick={() => runAction(request.id, 'separate')}
                           >
-                            {actioning === `${request.id}-separate` ? 'Separando...' : 'Separar'}
+                            {actioning === `${request.id}-separate` ? `${t('inventory.separate')}...` : t('inventory.separate')}
                           </button>
                           <button
                             className="inventory-small-button"
@@ -365,7 +408,7 @@ export default function InventoryRequests() {
                             disabled={!canRunAction(request.status, 'deliver') || Boolean(actioning)}
                             onClick={() => runAction(request.id, 'deliver')}
                           >
-                            {actioning === `${request.id}-deliver` ? 'Entregando...' : 'Entregar'}
+                            {actioning === `${request.id}-deliver` ? `${t('inventory.deliver')}...` : t('inventory.deliver')}
                           </button>
                           <button
                             className="inventory-danger-button"
@@ -373,7 +416,7 @@ export default function InventoryRequests() {
                             disabled={!canRunAction(request.status, 'cancel') || Boolean(actioning)}
                             onClick={() => runAction(request.id, 'cancel')}
                           >
-                            {actioning === `${request.id}-cancel` ? 'Cancelando...' : 'Cancelar'}
+                            {actioning === `${request.id}-cancel` ? `${t('inventory.cancel')}...` : t('inventory.cancel')}
                           </button>
                         </div>
                       </td>

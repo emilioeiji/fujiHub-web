@@ -1,0 +1,100 @@
+{
+  "app": {
+    "name": "FujiHub",
+    "tagline": "ERP Operacional",
+    "language": "Idioma"
+  },
+  "auth": {
+    "welcome": "Bem-vindo",
+    "username": "Usuário",
+    "password": "Senha",
+    "login": "Entrar",
+    "invalidCredentials": "Credenciais inválidas"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "employees": "Funcionários",
+    "inventory": "Uniformes",
+    "medical": "Atendimento médico",
+    "operations": "Escalas",
+    "reports": "Relatórios",
+    "backDashboard": "Voltar ao dashboard",
+    "logout": "Sair"
+  },
+  "common": {
+    "status": "Status",
+    "loading": "Carregando...",
+    "refresh": "Atualizar lista",
+    "refreshing": "Atualizando...",
+    "clear": "Limpar",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "create": "Criar",
+    "creating": "Criando...",
+    "select": "Selecione",
+    "none": "Sem definição"
+  },
+  "dashboard": {
+    "eyebrow": "Painel inicial",
+    "title": "Controle geral dos operadores",
+    "subtitle": "Visão central para acompanhar cadastros, operação e próximos módulos do ERP.",
+    "sessionActive": "Sessão ativa",
+    "sessionLocal": "Sessão local ativa",
+    "loadingSession": "Carregando sessão",
+    "loggedUser": "Usuário logado",
+    "modules": "Módulos",
+    "erpMap": "Mapa do ERP",
+    "nextStep": "Próximo passo",
+    "employeeMaster": "Cadastro master de funcionários"
+  },
+  "inventory": {
+    "module": "Inventory",
+    "itemsTitle": "Uniformes e estoque",
+    "itemsSubtitle": "Cadastro inicial de peças, tamanhos, cores e níveis mínimos para o fluxo de solicitações.",
+    "requestsTitle": "Solicitações de uniformes",
+    "requestsSubtitle": "Fluxo inicial para solicitar, aprovar, separar, entregar ou cancelar pedidos de uniforme.",
+    "items": "Itens",
+    "requests": "Solicitações",
+    "newItem": "Novo item",
+    "itemForm": "Cadastro de uniforme",
+    "stock": "Estoque",
+    "registeredItems": "Itens cadastrados",
+    "saveItem": "Salvar item",
+    "createRequest": "Criar solicitação",
+    "approve": "Aprovar",
+    "separate": "Separar",
+    "deliver": "Entregar",
+    "cancel": "Cancelar"
+  },
+  "medical": {
+    "module": "Medical",
+    "requestsTitle": "Atendimento médico interno",
+    "requestsSubtitle": "Solicitação, triagem e acompanhamento operacional de atendimentos médicos.",
+    "masterTitle": "Cadastros médicos",
+    "masterSubtitle": "Motivos, sintomas e destinos usados nas solicitações de atendimento.",
+    "requests": "Solicitações",
+    "masterData": "Cadastros",
+    "newRequest": "Nova solicitação",
+    "requestData": "Dados do atendimento",
+    "workflow": "Workflow",
+    "medicalRequests": "Solicitações médicas",
+    "triage": "Triar",
+    "start": "Iniciar",
+    "complete": "Concluir",
+    "cancel": "Cancelar",
+    "reason": "Motivo principal",
+    "symptoms": "Sintomas",
+    "severity": "Gravidade",
+    "destination": "Destino",
+    "startedAt": "Desde quando começou",
+    "hasVehicle": "Possui veículo próprio",
+    "needsTransport": "Precisa transporte",
+    "description": "Descrição",
+    "notes": "Observações"
+  },
+  "employees": {
+    "title": "Cadastro master de funcionários",
+    "subtitle": "Base central para registrar operadores, dados contratuais, alocação, controle financeiro e informações usadas pelos próximos módulos do ERP.",
+    "module": "Módulo master"
+  }
+}

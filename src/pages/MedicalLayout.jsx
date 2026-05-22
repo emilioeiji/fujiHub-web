@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 import './Inventory.css';
 
-export default function InventoryLayout({ children, title, subtitle, summary }) {
+export default function MedicalLayout({ children, title, subtitle, summary }) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -27,8 +27,8 @@ export default function InventoryLayout({ children, title, subtitle, summary }) 
         <nav className="inventory-nav">
           <Link className="inventory-nav-link" to="/dashboard">{t('nav.dashboard')}</Link>
           <Link className="inventory-nav-link" to="/employees">{t('nav.employees')}</Link>
-          <Link className="inventory-nav-link active" to="/inventory/items">{t('nav.inventory')}</Link>
-          <Link className="inventory-nav-link" to="/medical/requests">{t('nav.medical')}</Link>
+          <Link className="inventory-nav-link" to="/inventory/items">{t('nav.inventory')}</Link>
+          <Link className="inventory-nav-link active" to="/medical/requests">{t('nav.medical')}</Link>
           <span className="inventory-nav-link disabled">{t('nav.operations')}</span>
         </nav>
       </aside>
@@ -36,7 +36,7 @@ export default function InventoryLayout({ children, title, subtitle, summary }) 
       <main className="inventory-main">
         <header className="inventory-header">
           <div>
-            <p className="inventory-eyebrow">{t('inventory.module')}</p>
+            <p className="inventory-eyebrow">{t('medical.module')}</p>
             <h1>{title}</h1>
             <p>{subtitle}</p>
           </div>
@@ -48,18 +48,18 @@ export default function InventoryLayout({ children, title, subtitle, summary }) 
           </div>
         </header>
 
-        <nav className="inventory-tabs" aria-label="Inventory">
+        <nav className="inventory-tabs" aria-label="Medical">
           <Link
-            className={location.pathname === '/inventory/items' ? 'active' : ''}
-            to="/inventory/items"
+            className={location.pathname === '/medical/requests' ? 'active' : ''}
+            to="/medical/requests"
           >
-            {t('inventory.items')}
+            {t('medical.requests')}
           </Link>
           <Link
-            className={location.pathname === '/inventory/requests' ? 'active' : ''}
-            to="/inventory/requests"
+            className={location.pathname === '/medical/master-data' ? 'active' : ''}
+            to="/medical/master-data"
           >
-            {t('inventory.requests')}
+            {t('medical.masterData')}
           </Link>
         </nav>
 

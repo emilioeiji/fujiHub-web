@@ -5,6 +5,8 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import InventoryItems from './pages/InventoryItems';
 import InventoryRequests from './pages/InventoryRequests';
 import Login from './pages/Login';
+import MedicalMasterData from './pages/MedicalMasterData';
+import MedicalRequests from './pages/MedicalRequests';
 
 function ProtectedRoute({ children }) {
   const hasToken = Boolean(localStorage.getItem('access'));
@@ -50,6 +52,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <InventoryRequests />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/medical/requests"
+        element={
+          <ProtectedRoute>
+            <MedicalRequests />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/medical/master-data"
+        element={
+          <ProtectedRoute>
+            <MedicalMasterData />
           </ProtectedRoute>
         }
       />

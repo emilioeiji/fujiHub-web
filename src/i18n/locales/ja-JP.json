@@ -1,0 +1,100 @@
+{
+  "app": {
+    "name": "FujiHub",
+    "tagline": "業務ERP",
+    "language": "言語"
+  },
+  "auth": {
+    "welcome": "ようこそ",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "login": "ログイン",
+    "invalidCredentials": "認証情報が正しくありません"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "employees": "従業員",
+    "inventory": "制服",
+    "medical": "医療対応",
+    "operations": "勤務表",
+    "reports": "レポート",
+    "backDashboard": "ダッシュボードへ戻る",
+    "logout": "ログアウト"
+  },
+  "common": {
+    "status": "ステータス",
+    "loading": "読み込み中...",
+    "refresh": "一覧を更新",
+    "refreshing": "更新中...",
+    "clear": "クリア",
+    "save": "保存",
+    "saving": "保存中...",
+    "create": "作成",
+    "creating": "作成中...",
+    "select": "選択してください",
+    "none": "未設定"
+  },
+  "dashboard": {
+    "eyebrow": "初期パネル",
+    "title": "オペレーター管理",
+    "subtitle": "登録、運用、今後のERPモジュールを確認するための中心画面です。",
+    "sessionActive": "セッション有効",
+    "sessionLocal": "ローカルセッション有効",
+    "loadingSession": "セッション確認中",
+    "loggedUser": "ログインユーザー",
+    "modules": "モジュール",
+    "erpMap": "ERPマップ",
+    "nextStep": "次のステップ",
+    "employeeMaster": "従業員マスター登録"
+  },
+  "inventory": {
+    "module": "Inventory",
+    "itemsTitle": "制服・在庫",
+    "itemsSubtitle": "申請フローで使う品目、サイズ、色、最低在庫を管理します。",
+    "requestsTitle": "制服申請",
+    "requestsSubtitle": "制服の申請、承認、準備、受け渡し、キャンセルを管理します。",
+    "items": "品目",
+    "requests": "申請",
+    "newItem": "新規品目",
+    "itemForm": "制服登録",
+    "stock": "在庫",
+    "registeredItems": "登録済み品目",
+    "saveItem": "品目を保存",
+    "createRequest": "申請を作成",
+    "approve": "承認",
+    "separate": "準備",
+    "deliver": "受け渡し",
+    "cancel": "キャンセル"
+  },
+  "medical": {
+    "module": "Medical",
+    "requestsTitle": "社内医療対応",
+    "requestsSubtitle": "医療対応の申請、トリアージ、対応状況を管理します。",
+    "masterTitle": "医療マスター",
+    "masterSubtitle": "医療申請で使う理由、症状、行き先を管理します。",
+    "requests": "申請",
+    "masterData": "マスター",
+    "newRequest": "新規申請",
+    "requestData": "対応情報",
+    "workflow": "ワークフロー",
+    "medicalRequests": "医療申請",
+    "triage": "トリアージ",
+    "start": "開始",
+    "complete": "完了",
+    "cancel": "キャンセル",
+    "reason": "主な理由",
+    "symptoms": "症状",
+    "severity": "緊急度",
+    "destination": "行き先",
+    "startedAt": "開始時期",
+    "hasVehicle": "自家用車あり",
+    "needsTransport": "送迎が必要",
+    "description": "説明",
+    "notes": "備考"
+  },
+  "employees": {
+    "title": "従業員マスター登録",
+    "subtitle": "オペレーターの基本情報、契約、配置、管理情報を登録する基盤です。",
+    "module": "マスターモジュール"
+  }
+}

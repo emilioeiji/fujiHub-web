@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { authFetch } from '../utils/authFetch';
 import InventoryLayout from './InventoryLayout';
 
@@ -12,6 +13,7 @@ const emptyItem = {
   color: '',
   stock_quantity: 0,
   minimum_stock: 0,
+  unit_cost: 0,
   notes: '',
 };
 
@@ -44,6 +46,7 @@ function formatApiMessage(data, fallback) {
 }
 
 export default function InventoryItems() {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyItem);
@@ -111,6 +114,7 @@ export default function InventoryItems() {
       ...form,
       stock_quantity: Number(form.stock_quantity || 0),
       minimum_stock: Number(form.minimum_stock || 0),
+      unit_cost: Number(form.unit_cost || 0),
     };
 
     const res = await authFetch(`${API_BASE_URL}/api/inventory/items/`, {
@@ -137,16 +141,16 @@ export default function InventoryItems() {
 
   return (
     <InventoryLayout
-      title="Uniformes e estoque"
-      subtitle="Cadastro inicial de peças, tamanhos, cores e níveis mínimos para o fluxo de solicitações."
+      title={t('inventory.itemsTitle')}
+      subtitle={t('inventory.itemsSubtitle')}
       summary={summary}
     >
       <section className="inventory-workspace">
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">Novo item</p>
-              <h2>Cadastro de uniforme</h2>
+              <p className="inventory-eyebrow">{t('inventory.newItem')}</p>
+              <h2>{t('inventory.itemForm')}</h2>
             </div>
             {statusMessage ? (
               <span className={`inventory-status ${isError ? 'error' : ''}`}>{statusMessage}</span>
@@ -200,6 +204,17 @@ export default function InventoryItems() {
                   onChange={updateField}
                 />
               </label>
+              <label className="inventory-field">
+                <span>Custo unitário</span>
+                <input
+                  min="0"
+                  name="unit_cost"
+                  step="0.01"
+                  type="number"
+                  value={form.unit_cost}
+                  onChange={updateField}
+                />
+              </label>
               <label className="inventory-field full">
                 <span>Observações</span>
                 <textarea name="notes" rows={3} value={form.notes} onChange={updateField} />
@@ -213,10 +228,10 @@ export default function InventoryItems() {
                 disabled={submitting}
                 onClick={() => setForm(emptyItem)}
               >
-                Limpar
+                {t('common.clear')}
               </button>
               <button className="inventory-primary-button" type="submit" disabled={isSubmitDisabled}>
-                {submitting ? 'Salvando...' : 'Salvar item'}
+                {submitting ? t('common.saving') : t('inventory.saveItem')}
               </button>
             </div>
           </form>
@@ -225,8 +240,8 @@ export default function InventoryItems() {
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">Estoque</p>
-              <h2>Itens cadastrados</h2>
+              <p className="inventory-eyebrow">{t('inventory.stock')}</p>
+              <h2>{t('inventory.registeredItems')}</h2>
             </div>
             <div className="inventory-panel-tools">
               <button
@@ -235,7 +250,7 @@ export default function InventoryItems() {
                 disabled={loading}
                 onClick={loadData}
               >
-                {loading ? 'Atualizando...' : 'Atualizar lista'}
+                {loading ? t('common.refreshing') : t('common.refresh')}
               </button>
               <span className="inventory-status">{loading ? '...' : items.length}</span>
             </div>
@@ -257,6 +272,9 @@ export default function InventoryItems() {
                     <th>Cor</th>
                     <th>Estoque</th>
                     <th>Mínimo</th>
+                    <th>Custo</th>
+                    <th>Custo médio</th>
+                    <th>Preço médio</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -277,6 +295,9 @@ export default function InventoryItems() {
                         </span>
                       </td>
                       <td>{item.minimum_stock}</td>
+                      <td>{item.unit_cost}</td>
+                      <td>{item.average_cost}</td>
+                      <td>{item.average_price}</td>
                     </tr>
                   ))}
                 </tbody>
