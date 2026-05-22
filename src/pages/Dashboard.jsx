@@ -11,6 +11,12 @@ const modules = [
     to: '/employees',
   },
   {
+    title: 'Uniformes',
+    description: 'Cadastro de itens, solicitações e workflow de entrega de uniformes.',
+    status: 'Inicial',
+    to: '/inventory/items',
+  },
+  {
     title: 'Escalas e operações',
     description: 'Visão operacional de turnos, postos e disponibilidade da equipe.',
     status: 'Planejado',
@@ -77,8 +83,8 @@ export default function Dashboard() {
         <nav className="erp-nav">
           <Link className="erp-nav-link active" to="/dashboard">Dashboard</Link>
           <Link className="erp-nav-link" to="/employees">Funcionários</Link>
+          <Link className="erp-nav-link" to="/inventory/items">Uniformes</Link>
           <span className="erp-nav-link disabled">Escalas</span>
-          <span className="erp-nav-link disabled">Moradia</span>
           <span className="erp-nav-link disabled">Relatórios</span>
         </nav>
       </aside>

@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import './App.css';
 import Dashboard from './pages/Dashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
+import InventoryItems from './pages/InventoryItems';
+import InventoryRequests from './pages/InventoryRequests';
 import Login from './pages/Login';
 
 function ProtectedRoute({ children }) {
@@ -32,6 +34,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <EmployeeDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory/items"
+        element={
+          <ProtectedRoute>
+            <InventoryItems />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory/requests"
+        element={
+          <ProtectedRoute>
+            <InventoryRequests />
           </ProtectedRoute>
         }
       />

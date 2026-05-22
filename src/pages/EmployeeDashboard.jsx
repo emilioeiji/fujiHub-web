@@ -26,8 +26,8 @@ export default function EmployeeDashboard() {
         <nav className="master-nav">
           <Link className="master-nav-link" to="/dashboard">Dashboard</Link>
           <Link className="master-nav-link active" to="/employees">Funcionários</Link>
+          <Link className="master-nav-link" to="/inventory/items">Uniformes</Link>
           <span className="master-nav-link disabled">Escalas</span>
-          <span className="master-nav-link disabled">Moradia</span>
           <span className="master-nav-link disabled">Relatórios</span>
         </nav>
       </aside>
