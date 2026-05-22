@@ -1,0 +1,329 @@
+.erp-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  background: #f3f6f8;
+  color: #1f2933;
+}
+
+.erp-sidebar {
+  background: #0f2737;
+  color: #f7fbfd;
+  padding: 24px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.erp-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.erp-brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #28a7a1;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.erp-brand strong,
+.erp-brand span {
+  display: block;
+}
+
+.erp-brand strong {
+  font-size: 1.05rem;
+}
+
+.erp-brand span {
+  color: #a8c1cd;
+  font-size: 0.84rem;
+}
+
+.erp-nav {
+  display: grid;
+  gap: 6px;
+}
+
+.erp-nav-link {
+  color: #d9e8ee;
+  padding: 11px 12px;
+  border-radius: 8px;
+  font-weight: 650;
+}
+
+.erp-nav-link:hover,
+.erp-nav-link.active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.erp-nav-link.disabled {
+  color: #77909c;
+  cursor: default;
+}
+
+.erp-main {
+  padding: 28px;
+  display: grid;
+  gap: 24px;
+  align-content: start;
+}
+
+.erp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.erp-eyebrow {
+  margin: 0 0 6px;
+  color: #2f6f74;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.erp-header h1,
+.erp-panel h2 {
+  margin: 0;
+  color: #17232d;
+  letter-spacing: 0;
+}
+
+.erp-header h1 {
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+}
+
+.erp-subtitle {
+  margin: 10px 0 0;
+  max-width: 680px;
+  color: #61717b;
+}
+
+.erp-session {
+  min-width: 220px;
+  padding: 14px;
+  border: 1px solid #d8e3e8;
+  border-radius: 8px;
+  background: #ffffff;
+  display: grid;
+  gap: 6px;
+}
+
+.erp-session span {
+  color: #63717b;
+  font-size: 0.84rem;
+}
+
+.erp-session strong {
+  color: #17232d;
+}
+
+.erp-session button,
+.erp-primary-action {
+  border: 0;
+  border-radius: 8px;
+  background: #1f6f78;
+  color: #ffffff;
+  padding: 10px 14px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.erp-session button:hover,
+.erp-primary-action:hover {
+  background: #185a62;
+  color: #ffffff;
+}
+
+.erp-indicators {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.erp-indicator,
+.erp-panel {
+  background: #ffffff;
+  border: 1px solid #dce5ea;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(31, 41, 51, 0.05);
+}
+
+.erp-indicator {
+  min-height: 112px;
+  padding: 16px;
+  display: grid;
+  align-content: space-between;
+}
+
+.erp-indicator span,
+.erp-indicator small {
+  color: #657680;
+}
+
+.erp-indicator strong {
+  font-size: 2rem;
+  color: #17232d;
+}
+
+.erp-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 18px;
+}
+
+.erp-panel {
+  padding: 22px;
+}
+
+.erp-panel-large {
+  min-height: 360px;
+}
+
+.erp-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.erp-panel-header.compact {
+  margin-bottom: 14px;
+}
+
+.erp-panel p {
+  color: #5f6f79;
+}
+
+.erp-progress-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.erp-progress-list div {
+  border: 1px solid #dce5ea;
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fafb;
+}
+
+.erp-progress-list span {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #dcefeb;
+  color: #1f6f78;
+  font-weight: 800;
+}
+
+.erp-progress-list p {
+  margin: 12px 0 0;
+  color: #25323b;
+  font-weight: 700;
+}
+
+.erp-module-list {
+  display: grid;
+  gap: 10px;
+}
+
+.erp-module-item {
+  border: 1px solid #dce5ea;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  color: inherit;
+  background: #ffffff;
+}
+
+.erp-module-item.actionable:hover {
+  border-color: #1f6f78;
+  background: #f4fbfa;
+}
+
+.erp-module-item strong {
+  color: #17232d;
+}
+
+.erp-module-item p {
+  margin: 5px 0 0;
+  font-size: 0.9rem;
+}
+
+.erp-module-item span {
+  white-space: nowrap;
+  color: #2f6f74;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+@media (max-width: 980px) {
+  .erp-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-sidebar {
+    padding: 16px;
+  }
+
+  .erp-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow-x: auto;
+  }
+
+  .erp-header,
+  .erp-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-header {
+    flex-direction: column;
+  }
+
+  .erp-session {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .erp-indicators,
+  .erp-progress-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .erp-main {
+    padding: 18px;
+  }
+
+  .erp-nav {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  .erp-indicators,
+  .erp-progress-list {
+    grid-template-columns: 1fr;
+  }
+
+  .erp-panel-header,
+  .erp-module-item {
+    flex-direction: column;
+  }
+}

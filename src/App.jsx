@@ -1,39 +1,41 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import './App.css';
+import Dashboard from './pages/Dashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard';
+import Login from './pages/Login';
 
-import DashboardScreen from './src/screens/DashboardScreen';
-import EmployeesScreen from './src/screens/EmployeesScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
+function ProtectedRoute({ children }) {
+  const hasToken = Boolean(localStorage.getItem('access'));
 
-const Tab = createBottomTabNavigator();
+  if (!hasToken) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ color, size }) => {
-            let iconName;
-
-            if (route.name === 'Dashboard') {
-              iconName = 'home-outline';
-            } else if (route.name === 'Funcionários') {
-              iconName = 'people-outline';
-            } else if (route.name === 'Configurações') {
-              iconName = 'settings-outline';
-            }
-
-            return <Icon name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#0078d7',
-          tabBarInactiveTintColor: 'gray',
-        })}
-      >
-        <Tab.Screen name="Dashboard" component={DashboardScreen} />
-        <Tab.Screen name="Funcionários" component={EmployeesScreen} />
-        <Tab.Screen name="Configurações" component={SettingsScreen} />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employees"
+        element={
+          <ProtectedRoute>
+            <EmployeeDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }

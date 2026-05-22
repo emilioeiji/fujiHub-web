@@ -1,42 +1,132 @@
-.fuji-form-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  background: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.05);
-  font-family: 'Inter', sans-serif;
+.master-form {
+  display: grid;
+  gap: 18px;
 }
 
-h1 {
-  color: #3f51b5;
-  margin-bottom: 1rem;
+.master-form fieldset {
+  margin: 0;
+  padding: 0 0 18px;
+  border: 0;
+  border-bottom: 1px solid #e2eaee;
 }
 
-fieldset {
-  border: none;
-  margin-bottom: 2rem;
+.master-form fieldset:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
-legend {
-  font-weight: bold;
-  color: #3f51b5;
-  margin-bottom: 0.5rem;
-}
-
-input, textarea {
+.master-form legend {
   width: 100%;
-  padding: 0.6rem;
-  margin-bottom: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  margin: 0 0 14px;
+  color: #17232d;
+  font-size: 1rem;
+  font-weight: 800;
 }
 
-button {
-  background-color: #3f51b5;
-  color: white;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.master-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.master-form-grid.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.master-field {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.master-field.full {
+  width: 100%;
+}
+
+.master-field span,
+.master-check-field span {
+  color: #51636e;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.master-field input,
+.master-field select,
+.master-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd9df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17232d;
+  padding: 10px 11px;
+  font: inherit;
+  outline: none;
+}
+
+.master-field textarea {
+  min-height: 104px;
+  resize: vertical;
+}
+
+.master-field input:focus,
+.master-field select:focus,
+.master-field textarea:focus {
+  border-color: #1f6f78;
+  box-shadow: 0 0 0 3px rgba(40, 167, 161, 0.16);
+}
+
+.master-check-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.master-check-field {
+  min-height: 44px;
+  border: 1px solid #dce5ea;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f8fafb;
+}
+
+.master-check-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: #1f6f78;
+}
+
+.master-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+@media (max-width: 900px) {
+  .master-form-grid,
+  .master-form-grid.compact,
+  .master-check-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .master-form-grid,
+  .master-form-grid.compact,
+  .master-check-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .master-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .master-form-actions button {
+    width: 100%;
+  }
 }

@@ -1,13 +1,49 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useEmployees } from '../hooks/useEmployees';
+import { authFetch } from '../utils/authFetch';
 import './EmployeeForm.css';
+
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+function TextField({ label, register, name, type = 'text', required = false }) {
+  return (
+    <label className="master-field">
+      <span>{label}</span>
+      <input type={type} {...register(name)} required={required} />
+    </label>
+  );
+}
+
+function SelectField({ label, register, name, placeholder, options, getLabel }) {
+  return (
+    <label className="master-field">
+      <span>{label}</span>
+      <select {...register(name)}>
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {getLabel(option)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function CheckboxField({ label, register, name }) {
+  return (
+    <label className="master-check-field">
+      <input type="checkbox" {...register(name)} />
+      <span>{label}</span>
+    </label>
+  );
+}
 
 export default function EmployeeForm() {
   const { register, handleSubmit, reset } = useForm();
   const { createEmployee } = useEmployees();
 
-  // Estados para tabelas auxiliares
   const [genders, setGenders] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [nationalities, setNationalities] = useState([]);
@@ -19,7 +55,6 @@ export default function EmployeeForm() {
   const [buildingFloors, setBuildingFloors] = useState([]);
   const [rejoinedOptions, setRejoinedOptions] = useState([]);
 
-  // Carregar opções da API
   useEffect(() => {
     async function fetchOptions() {
       const endpoints = {
@@ -36,53 +71,51 @@ export default function EmployeeForm() {
       };
 
       for (const [key, url] of Object.entries(endpoints)) {
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('access')}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          switch (key) {
-            case 'genders':
-              setGenders(data);
-              break;
-            case 'shifts':
-              setShifts(data);
-              break;
-            case 'nationalities':
-              setNationalities(data);
-              break;
-            case 'departments':
-              setDepartments(data);
-              break;
-            case 'billingRates':
-              setBillingRates(data);
-              break;
-            case 'processes':
-              setProcesses(data);
-              break;
-            case 'entryTypes':
-              setEntryTypes(data);
-              break;
-            case 'hireTypes':
-              setHireTypes(data);
-              break;
-            case 'buildingFloors':
-              setBuildingFloors(data);
-              break;
-            case 'rejoinedOptions':
-              setRejoinedOptions(data);
-              break;
-            default:
-              break;
-          }
+        const res = await authFetch(`${API_BASE_URL}${url}`);
+        if (!res.ok) continue;
+
+        const data = await res.json();
+        switch (key) {
+          case 'genders':
+            setGenders(data);
+            break;
+          case 'shifts':
+            setShifts(data);
+            break;
+          case 'nationalities':
+            setNationalities(data);
+            break;
+          case 'departments':
+            setDepartments(data);
+            break;
+          case 'billingRates':
+            setBillingRates(data);
+            break;
+          case 'processes':
+            setProcesses(data);
+            break;
+          case 'entryTypes':
+            setEntryTypes(data);
+            break;
+          case 'hireTypes':
+            setHireTypes(data);
+            break;
+          case 'buildingFloors':
+            setBuildingFloors(data);
+            break;
+          case 'rejoinedOptions':
+            setRejoinedOptions(data);
+            break;
+          default:
+            break;
         }
       }
     }
+
     fetchOptions();
   }, []);
 
   const onSubmit = async (data) => {
-    // Converte strings vazias em null para datas
     const cleaned = {
       ...data,
       joined_imc: data.joined_imc || null,
@@ -94,7 +127,6 @@ export default function EmployeeForm() {
       dispatch_start: data.dispatch_start || null,
     };
 
-    // Converte strings vazias em null para números opcionais
     [
       'hourly_rate',
       'total_hourly',
@@ -117,158 +149,114 @@ export default function EmployeeForm() {
   };
 
   return (
-    <div className="fuji-form-container">
-      <h1>📇 Cadastro de Funcionário</h1>
-      <form onSubmit={handleSubmit(onSubmit)}>
+    <section className="master-panel employee-form-panel">
+      <div className="master-panel-header">
+        <div>
+          <p className="master-eyebrow">Novo registro</p>
+          <h2>Dados do funcionário</h2>
+        </div>
+        <span className="master-required-note">ID obrigatório</span>
+      </div>
+
+      <form className="master-form" onSubmit={handleSubmit(onSubmit)}>
         <fieldset>
           <legend>Identificação</legend>
-          <input {...register('employee_id')} placeholder="ID do Funcionário" required />
-          <input {...register('employee_cd')} placeholder="Código do Funcionário" />
-          <input {...register('internal_name')} placeholder="Nome Interno" />
-          <input {...register('name_en')} placeholder="Nome (EN)" />
-          <input {...register('name_jp')} placeholder="Nome (JP)" />
-          <input {...register('name_kana')} placeholder="Nome (Kana)" />
-          <input {...register('name_cd')} placeholder="Nome CD (Murata)" />
+          <div className="master-form-grid">
+            <TextField label="ID do funcionário" register={register} name="employee_id" required />
+            <TextField label="Código do funcionário" register={register} name="employee_cd" />
+            <TextField label="Nome interno" register={register} name="internal_name" />
+            <TextField label="Nome em inglês" register={register} name="name_en" />
+            <TextField label="Nome em japonês" register={register} name="name_jp" />
+            <TextField label="Nome kana" register={register} name="name_kana" />
+            <TextField label="Nome CD Murata" register={register} name="name_cd" />
+          </div>
         </fieldset>
 
         <fieldset>
-          <legend>Dados Pessoais</legend>
-          <input type="date" {...register('birth_date')} />
-          <input type="number" {...register('age')} placeholder="Idade" />
-          <select {...register('gender')}>
-            <option value="">Selecione o gênero</option>
-            {genders.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.label_pt}
-              </option>
-            ))}
-          </select>
-          <select {...register('nationality')}>
-            <option value="">Selecione a nacionalidade</option>
-            {nationalities.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.name_pt}
-              </option>
-            ))}
-          </select>
+          <legend>Dados pessoais</legend>
+          <div className="master-form-grid compact">
+            <TextField label="Data de nascimento" register={register} name="birth_date" type="date" />
+            <TextField label="Idade" register={register} name="age" type="number" />
+            <SelectField label="Gênero" register={register} name="gender" placeholder="Selecione" options={genders} getLabel={(item) => item.label_pt} />
+            <SelectField label="Nacionalidade" register={register} name="nationality" placeholder="Selecione" options={nationalities} getLabel={(item) => item.name_pt} />
+          </div>
         </fieldset>
 
         <fieldset>
-          <legend>Empresa</legend>
-          <input {...register('workplace_cd')} placeholder="Código do Local" />
-          <input {...register('workplace_name')} placeholder="Nome do Local" />
-          <input {...register('site_cd')} placeholder="Código do Site" />
-          <input {...register('site_abbr')} placeholder="Abreviação do Site" />
-          <select {...register('department')}>
-            <option value="">Selecione o departamento</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label_pt}
-              </option>
-            ))}
-          </select>
-          <select {...register('shift')}>
-            <option value="">Selecione o turno</option>
-            {shifts.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label_pt}
-              </option>
-            ))}
-          </select>
-          <select {...register('building_floor')}>
-            <option value="">Selecione o prédio/andar</option>
-            {buildingFloors.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.label_pt}
-              </option>
-            ))}
-          </select>
+          <legend>Empresa e alocação</legend>
+          <div className="master-form-grid">
+            <TextField label="Código do local" register={register} name="workplace_cd" />
+            <TextField label="Nome do local" register={register} name="workplace_name" />
+            <TextField label="Código do site" register={register} name="site_cd" />
+            <TextField label="Abreviação do site" register={register} name="site_abbr" />
+            <SelectField label="Departamento" register={register} name="department" placeholder="Selecione" options={departments} getLabel={(item) => item.label_pt} />
+            <SelectField label="Turno" register={register} name="shift" placeholder="Selecione" options={shifts} getLabel={(item) => item.label_pt} />
+            <SelectField label="Prédio/andar" register={register} name="building_floor" placeholder="Selecione" options={buildingFloors} getLabel={(item) => item.label_pt} />
+          </div>
         </fieldset>
 
         <fieldset>
           <legend>Contrato</legend>
-          <input type="date" {...register('joined_imc')} placeholder="Entrada IMC" />
-          <input type="date" {...register('joined_fa')} placeholder="Entrada FA" />
-          <input type="date" {...register('new_joined')} placeholder="Nova Entrada" />
-          <input type="date" {...register('end_work')} placeholder="Fim do Trabalho" />
-          <input type="date" {...register('retired')} placeholder="Data de Saída" />
-          <input type="date" {...register('dispatch_start')} placeholder="Início da Alocação" />
-          <select {...register('billing_rate')}>
-            <option value="">Selecione a taxa de cobrança</option>
-            {billingRates.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.label_pt}
-              </option>
-            ))}
-          </select>
-          <select {...register('entry_type')}>
-            <option value="">Selecione o tipo de entrada</option>
-            {entryTypes.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.label_pt}
-              </option>
-            ))}
-          </select>
-          <select {...register('hire_type')}>
-            <option value="">Selecione o tipo de contratação</option>
-            {hireTypes.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.label_pt}
-              </option>
-            ))}
-          </select>
-          <select {...register('rejoined')}>
-            <option value="">Reentrada?</option>
-            {rejoinedOptions.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label_pt}
-              </option>
-            ))}
-          </select>
+          <div className="master-form-grid">
+            <TextField label="Entrada IMC" register={register} name="joined_imc" type="date" />
+            <TextField label="Entrada FA" register={register} name="joined_fa" type="date" />
+            <TextField label="Nova entrada" register={register} name="new_joined" type="date" />
+            <TextField label="Fim do trabalho" register={register} name="end_work" type="date" />
+            <TextField label="Data de saída" register={register} name="retired" type="date" />
+            <TextField label="Início da alocação" register={register} name="dispatch_start" type="date" />
+            <SelectField label="Taxa de cobrança" register={register} name="billing_rate" placeholder="Selecione" options={billingRates} getLabel={(item) => item.label_pt} />
+            <SelectField label="Tipo de entrada" register={register} name="entry_type" placeholder="Selecione" options={entryTypes} getLabel={(item) => item.label_pt} />
+            <SelectField label="Tipo de contratação" register={register} name="hire_type" placeholder="Selecione" options={hireTypes} getLabel={(item) => item.label_pt} />
+            <SelectField label="Reentrada" register={register} name="rejoined" placeholder="Selecione" options={rejoinedOptions} getLabel={(item) => item.label_pt} />
+          </div>
         </fieldset>
 
         <fieldset>
           <legend>Financeiro</legend>
-          <input type="number" {...register('hourly_rate')} placeholder="Taxa Horária" />
-          <input type="number" {...register('total_hourly')} placeholder="Total Hora" />
-          <input type="number" {...register('months_worked')} placeholder="Meses Trabalhados" />
-          <input type="number" {...register('years_elapsed')} placeholder="Anos Decorridos" />
-          <input type="number" {...register('months_elapsed')} placeholder="Meses Decorridos" />
-          <input {...register('elapsed_str')} placeholder="Tempo Decorrido (texto)" />
+          <div className="master-form-grid compact">
+            <TextField label="Taxa horária" register={register} name="hourly_rate" type="number" />
+            <TextField label="Total hora" register={register} name="total_hourly" type="number" />
+            <TextField label="Meses trabalhados" register={register} name="months_worked" type="number" />
+            <TextField label="Anos decorridos" register={register} name="years_elapsed" type="number" />
+            <TextField label="Meses decorridos" register={register} name="months_elapsed" type="number" />
+            <TextField label="Tempo decorrido" register={register} name="elapsed_str" />
+          </div>
         </fieldset>
 
         <fieldset>
-          <legend>Outros</legend>
-          <select {...register('process')}>
-            <option value="">Selecione o processo</option>
-            {processes.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label_pt}
-              </option>
-            ))}
-          </select>
-          <input {...register('ordia_number')} placeholder="Número ORDIA" />
-          <input {...register('office_cd')} placeholder="Código do Escritório" />
-          <input {...register('ic_card')} placeholder="Cartão IC" />
-          <input {...register('imc_card')} placeholder="Cartão IMC" />
-          <label>
-            <input type="checkbox" {...register('active_end_month')} /> Ativo no fim do mês
-          </label>
-          <label>
-            <input type="checkbox" {...register('manager_flag')} /> É gestor
-          </label>
-          <label>
-            <input type="checkbox" {...register('view_flag')} /> Pode visualizar
-          </label>
+          <legend>Controle interno</legend>
+          <div className="master-form-grid compact">
+            <SelectField label="Processo" register={register} name="process" placeholder="Selecione" options={processes} getLabel={(item) => item.label_pt} />
+            <TextField label="Número ORDIA" register={register} name="ordia_number" />
+            <TextField label="Código do escritório" register={register} name="office_cd" />
+            <TextField label="Cartão IC" register={register} name="ic_card" />
+            <TextField label="Cartão IMC" register={register} name="imc_card" />
+          </div>
+
+          <div className="master-check-grid">
+            <CheckboxField label="Ativo no fim do mês" register={register} name="active_end_month" />
+            <CheckboxField label="É gestor" register={register} name="manager_flag" />
+            <CheckboxField label="Pode visualizar" register={register} name="view_flag" />
+          </div>
         </fieldset>
 
         <fieldset>
-          <legend>Notas e Observações</legend>
-          <textarea {...register('notes')} rows={3} placeholder="Comentários adicionais" />
+          <legend>Notas e observações</legend>
+          <label className="master-field full">
+            <span>Comentários adicionais</span>
+            <textarea {...register('notes')} rows={4} />
+          </label>
         </fieldset>
 
-        <button type="submit">Salvar</button>
+        <div className="master-form-actions">
+          <button type="button" className="master-secondary-button" onClick={() => reset()}>
+            Limpar
+          </button>
+          <button type="submit" className="master-primary-button">
+            Salvar funcionário
+          </button>
+        </div>
       </form>
-    </div>
+    </section>
   );
 }

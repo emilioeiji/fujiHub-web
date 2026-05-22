@@ -29,7 +29,7 @@ export async function authFetch(url, options = {}) {
       res = await doFetch(access);
     } else {
       localStorage.clear();
-      window.location.hash = '#/login';
+      window.location.href = '/login';
     }
   }
 
