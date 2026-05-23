@@ -57,6 +57,7 @@ export default function Dashboard() {
       title: t('dashboard.moduleCards.operationsTitle'),
       description: t('dashboard.moduleCards.operationsDescription'),
       status: t('dashboard.moduleCards.statusPlanned'),
+      to: '/operations/calendars',
     },
     {
       title: t('dashboard.moduleCards.housingTitle'),

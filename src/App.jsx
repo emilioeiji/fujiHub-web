@@ -7,6 +7,8 @@ import InventoryRequests from './pages/InventoryRequests';
 import Login from './pages/Login';
 import MedicalMasterData from './pages/MedicalMasterData';
 import MedicalRequests from './pages/MedicalRequests';
+import OperationsCalendarGrid from './pages/OperationsCalendarGrid';
+import OperationsCalendars from './pages/OperationsCalendars';
 
 function ProtectedRoute({ children }) {
   const hasToken = Boolean(localStorage.getItem('access'));
@@ -68,6 +70,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <MedicalMasterData />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/calendars"
+        element={
+          <ProtectedRoute>
+            <OperationsCalendars />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/calendars/:id/grid"
+        element={
+          <ProtectedRoute>
+            <OperationsCalendarGrid />
           </ProtectedRoute>
         }
       />

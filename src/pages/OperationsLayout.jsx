@@ -2,8 +2,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
 import './Inventory.css';
+import './Operations.css';
 
-export default function MedicalLayout({ children, title, subtitle, summary }) {
+export default function OperationsLayout({ children, title, subtitle, summary }) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,15 +29,15 @@ export default function MedicalLayout({ children, title, subtitle, summary }) {
           <Link className="inventory-nav-link" to="/dashboard">{t('nav.dashboard')}</Link>
           <Link className="inventory-nav-link" to="/employees">{t('nav.employees')}</Link>
           <Link className="inventory-nav-link" to="/inventory/items">{t('nav.inventory')}</Link>
-          <Link className="inventory-nav-link active" to="/medical/requests">{t('nav.medical')}</Link>
-          <Link className="inventory-nav-link" to="/operations/calendars">{t('nav.operations')}</Link>
+          <Link className="inventory-nav-link" to="/medical/requests">{t('nav.medical')}</Link>
+          <Link className="inventory-nav-link active" to="/operations/calendars">{t('nav.operations')}</Link>
         </nav>
       </aside>
 
       <main className="inventory-main">
         <header className="inventory-header">
           <div>
-            <p className="inventory-eyebrow">{t('medical.module')}</p>
+            <p className="inventory-eyebrow">{t('operations.module')}</p>
             <h1>{title}</h1>
             <p>{subtitle}</p>
           </div>
@@ -48,23 +49,17 @@ export default function MedicalLayout({ children, title, subtitle, summary }) {
           </div>
         </header>
 
-        <nav className="inventory-tabs" aria-label={t('medical.module')}>
+        <nav className="inventory-tabs" aria-label={t('operations.module')}>
           <Link
-            className={location.pathname === '/medical/requests' ? 'active' : ''}
-            to="/medical/requests"
+            className={location.pathname === '/operations/calendars' ? 'active' : ''}
+            to="/operations/calendars"
           >
-            {t('medical.requests')}
-          </Link>
-          <Link
-            className={location.pathname === '/medical/master-data' ? 'active' : ''}
-            to="/medical/master-data"
-          >
-            {t('medical.masterData')}
+            {t('operations.calendars')}
           </Link>
         </nav>
 
         {summary ? (
-          <section className="inventory-summary" aria-label={t('medical.module')}>
+          <section className="inventory-summary" aria-label={t('operations.module')}>
             {summary.map((item) => (
               <article key={item.label}>
                 <span>{item.label}</span>

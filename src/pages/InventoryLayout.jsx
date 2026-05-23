@@ -29,7 +29,7 @@ export default function InventoryLayout({ children, title, subtitle, summary }) 
           <Link className="inventory-nav-link" to="/employees">{t('nav.employees')}</Link>
           <Link className="inventory-nav-link active" to="/inventory/items">{t('nav.inventory')}</Link>
           <Link className="inventory-nav-link" to="/medical/requests">{t('nav.medical')}</Link>
-          <span className="inventory-nav-link disabled">{t('nav.operations')}</span>
+          <Link className="inventory-nav-link" to="/operations/calendars">{t('nav.operations')}</Link>
         </nav>
       </aside>
 
