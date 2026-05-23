@@ -480,6 +480,9 @@ export default function OperationsCalendarGrid() {
               <Link className="inventory-secondary-button" to="/operations/calendars">
                 {t('operations.backToCalendars')}
               </Link>
+              <Link className="inventory-secondary-button" to={`/operations/calendars/${id}/print`}>
+                {t('operations.printView')}
+              </Link>
               <button className="inventory-secondary-button" type="button" disabled={loading} onClick={loadData}>
                 {loading ? t('common.refreshing') : t('common.refresh')}
               </button>

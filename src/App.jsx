@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import MedicalMasterData from './pages/MedicalMasterData';
 import MedicalRequests from './pages/MedicalRequests';
 import OperationsCalendarGrid from './pages/OperationsCalendarGrid';
+import OperationsCalendarPrint from './pages/OperationsCalendarPrint';
 import OperationsCalendars from './pages/OperationsCalendars';
 
 function ProtectedRoute({ children }) {
@@ -86,6 +87,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <OperationsCalendarGrid />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/calendars/:id/print"
+        element={
+          <ProtectedRoute>
+            <OperationsCalendarPrint />
           </ProtectedRoute>
         }
       />

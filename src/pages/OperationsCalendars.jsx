@@ -269,6 +269,9 @@ export default function OperationsCalendars() {
                         <Link className="inventory-small-button" to={`/operations/calendars/${calendar.id}/grid`}>
                           {t('operations.openGrid')}
                         </Link>
+                        <Link className="inventory-small-button" to={`/operations/calendars/${calendar.id}/print`}>
+                          {t('operations.print')}
+                        </Link>
                       </td>
                     </tr>
                   ))}
