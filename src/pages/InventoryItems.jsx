@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getLocalizedLabel } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import InventoryLayout from './InventoryLayout';
 
@@ -46,7 +47,7 @@ function formatApiMessage(data, fallback) {
 }
 
 export default function InventoryItems() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyItem);
@@ -60,11 +61,11 @@ export default function InventoryItems() {
     const totalStock = items.reduce((sum, item) => sum + Number(item.stock_quantity || 0), 0);
 
     return [
-      { label: 'Itens cadastrados', value: items.length, detail: 'Uniformes ativos no cadastro' },
-      { label: 'Peças em estoque', value: totalStock, detail: 'Soma das quantidades atuais' },
-      { label: 'Estoque mínimo', value: lowStock, detail: 'Itens em ponto de atenção' },
+      { label: t('inventory.registeredItems'), value: items.length, detail: t('inventory.activeItems') },
+      { label: t('inventory.totalPieces'), value: totalStock, detail: t('inventory.totalPiecesDetail') },
+      { label: t('inventory.minimumStock'), value: lowStock, detail: t('inventory.minimumStockDetail') },
     ];
-  }, [items]);
+  }, [items, t]);
 
   const loadData = async () => {
     setLoading(true);
@@ -75,7 +76,7 @@ export default function InventoryItems() {
     ]);
 
     if (!itemsRes.ok || !categoriesRes.ok) {
-      setStatusMessage('Não foi possível carregar os dados de uniformes.');
+      setStatusMessage(t('inventory.loadError'));
       setIsError(true);
       setLoading(false);
       return;
@@ -124,19 +125,19 @@ export default function InventoryItems() {
     const data = await readJson(res);
 
     if (!res.ok) {
-      setStatusMessage(formatApiMessage(data, 'Sem permissão ou dados inválidos para cadastrar item.'));
+      setStatusMessage(formatApiMessage(data, t('inventory.itemCreateError')));
       setIsError(true);
       setSubmitting(false);
       return;
     }
 
     setForm(emptyItem);
-    setStatusMessage('Item cadastrado com sucesso.');
+    setStatusMessage(t('inventory.itemCreated'));
     await loadData();
     setSubmitting(false);
   };
 
-  const categoryName = (item) => item.category_detail?.name || item.category || '-';
+  const categoryName = (item) => getLocalizedLabel(item.category_detail, i18n, item.category || '-');
   const isSubmitDisabled = submitting || loading || categories.length === 0;
 
   return (
@@ -160,32 +161,34 @@ export default function InventoryItems() {
           <form className="inventory-form" onSubmit={handleSubmit}>
             <div className="inventory-form-grid">
               <label className="inventory-field">
-                <span>SKU/código</span>
+                <span>{t('inventory.sku')}</span>
                 <input name="sku" value={form.sku} onChange={updateField} required />
               </label>
               <label className="inventory-field">
-                <span>Nome</span>
+                <span>{t('common.name')}</span>
                 <input name="name" value={form.name} onChange={updateField} required />
               </label>
               <label className="inventory-field">
-                <span>Categoria</span>
+                <span>{t('inventory.category')}</span>
                 <select name="category" value={form.category} onChange={updateField} required>
-                  <option value="">Selecione</option>
+                  <option value="">{t('common.select')}</option>
                   {categories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
+                    <option key={category.id} value={category.id}>
+                      {getLocalizedLabel(category, i18n, category.name)}
+                    </option>
                   ))}
                 </select>
               </label>
               <label className="inventory-field">
-                <span>Tamanho</span>
+                <span>{t('inventory.size')}</span>
                 <input name="size" value={form.size} onChange={updateField} required />
               </label>
               <label className="inventory-field">
-                <span>Cor</span>
+                <span>{t('inventory.color')}</span>
                 <input name="color" value={form.color} onChange={updateField} required />
               </label>
               <label className="inventory-field">
-                <span>Quantidade</span>
+                <span>{t('inventory.quantity')}</span>
                 <input
                   min="0"
                   name="stock_quantity"
@@ -195,7 +198,7 @@ export default function InventoryItems() {
                 />
               </label>
               <label className="inventory-field">
-                <span>Estoque mínimo</span>
+                <span>{t('inventory.minimumStock')}</span>
                 <input
                   min="0"
                   name="minimum_stock"
@@ -205,7 +208,7 @@ export default function InventoryItems() {
                 />
               </label>
               <label className="inventory-field">
-                <span>Custo unitário</span>
+                <span>{t('inventory.unitCost')}</span>
                 <input
                   min="0"
                   name="unit_cost"
@@ -216,7 +219,7 @@ export default function InventoryItems() {
                 />
               </label>
               <label className="inventory-field full">
-                <span>Observações</span>
+                <span>{t('common.notes')}</span>
                 <textarea name="notes" rows={3} value={form.notes} onChange={updateField} />
               </label>
             </div>
@@ -257,24 +260,24 @@ export default function InventoryItems() {
           </div>
 
           {loading ? (
-            <p className="inventory-empty-state">Carregando itens...</p>
+            <p className="inventory-empty-state">{t('inventory.loadingItems')}</p>
           ) : items.length === 0 ? (
-            <p className="inventory-empty-state">Nenhum item de uniforme cadastrado.</p>
+            <p className="inventory-empty-state">{t('inventory.emptyItems')}</p>
           ) : (
             <div className="inventory-table-wrap">
               <table className="inventory-table">
                 <thead>
                   <tr>
                     <th>SKU</th>
-                    <th>Item</th>
-                    <th>Categoria</th>
-                    <th>Tamanho</th>
-                    <th>Cor</th>
-                    <th>Estoque</th>
-                    <th>Mínimo</th>
-                    <th>Custo</th>
-                    <th>Custo médio</th>
-                    <th>Preço médio</th>
+                    <th>{t('inventory.item')}</th>
+                    <th>{t('inventory.category')}</th>
+                    <th>{t('inventory.size')}</th>
+                    <th>{t('inventory.color')}</th>
+                    <th>{t('inventory.stock')}</th>
+                    <th>{t('inventory.minimumStock')}</th>
+                    <th>{t('inventory.cost')}</th>
+                    <th>{t('inventory.averageCost')}</th>
+                    <th>{t('inventory.averagePrice')}</th>
                   </tr>
                 </thead>
                 <tbody>

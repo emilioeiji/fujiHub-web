@@ -17,19 +17,6 @@ function getEmptyRequest() {
   };
 }
 
-const statusLabels = {
-  pending: 'Pendente',
-  approved: 'Aprovado',
-  separated: 'Separado',
-  delivered: 'Entregue',
-  cancelled: 'Cancelado',
-};
-
-const requestTypeLabels = {
-  donation: 'Doação',
-  purchase: 'Compra',
-};
-
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.results)) return data.results;
@@ -97,11 +84,11 @@ export default function InventoryRequests() {
     const separated = requests.filter((request) => request.status === 'separated').length;
 
     return [
-      { label: 'Solicitações', value: requests.length, detail: 'Registros carregados' },
-      { label: 'Pendentes', value: pending, detail: 'Aguardando aprovação' },
-      { label: 'Separadas', value: separated, detail: 'Prontas para entrega' },
+      { label: t('inventory.requests'), value: requests.length, detail: t('inventory.loadedRecords') },
+      { label: t('inventory.statuses.pending'), value: pending, detail: t('inventory.pendingApproval') },
+      { label: t('inventory.statuses.separated'), value: separated, detail: t('inventory.readyDelivery') },
     ];
-  }, [requests]);
+  }, [requests, t]);
 
   const loadData = async () => {
     setLoading(true);
@@ -117,7 +104,7 @@ export default function InventoryRequests() {
     if (employeesRes.ok) setEmployees(normalizeList(await employeesRes.json()));
 
     if (!requestsRes.ok || !itemsRes.ok || !employeesRes.ok) {
-      setStatusMessage('Alguns dados não puderam ser carregados.');
+      setStatusMessage(t('inventory.someDataLoadError'));
       setIsError(true);
     } else {
       setStatusMessage('');
@@ -162,14 +149,14 @@ export default function InventoryRequests() {
     const data = await readJson(res);
 
     if (!res.ok) {
-      setStatusMessage(formatApiMessage(data, 'Sem permissão ou dados inválidos para criar solicitação.'));
+      setStatusMessage(formatApiMessage(data, t('inventory.requestCreateError')));
       setIsError(true);
       setSubmitting(false);
       return;
     }
 
     setForm(getEmptyRequest());
-    setStatusMessage('Solicitação criada com sucesso.');
+    setStatusMessage(t('inventory.requestCreated'));
     await loadData();
     setSubmitting(false);
   };
@@ -181,18 +168,18 @@ export default function InventoryRequests() {
 
     const res = await authFetch(`${API_BASE_URL}/api/inventory/requests/${requestId}/${action}/`, {
       method: 'POST',
-      body: JSON.stringify({ note: `Ação ${action} executada pela tela web` }),
+      body: JSON.stringify({ note: action }),
     });
     const data = await readJson(res);
 
     if (!res.ok) {
-      setStatusMessage(formatApiMessage(data, 'Sem permissão ou transição inválida.'));
+      setStatusMessage(formatApiMessage(data, t('inventory.invalidTransition')));
       setIsError(true);
       setActioning('');
       return;
     }
 
-    setStatusMessage('Solicitação atualizada.');
+    setStatusMessage(t('inventory.requestUpdated'));
     await loadData();
     setActioning('');
   };
@@ -213,8 +200,8 @@ export default function InventoryRequests() {
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">Nova solicitação</p>
-              <h2>Pedido simples</h2>
+              <p className="inventory-eyebrow">{t('inventory.newRequest')}</p>
+              <h2>{t('inventory.simpleRequest')}</h2>
             </div>
             {statusMessage ? (
               <span className={`inventory-status ${isError ? 'error' : ''}`}>{statusMessage}</span>
@@ -224,9 +211,9 @@ export default function InventoryRequests() {
           <form className="inventory-form" onSubmit={handleSubmit}>
             <div className="inventory-form-grid">
               <label className="inventory-field full">
-                <span>Funcionário</span>
+                <span>{t('inventory.employee')}</span>
                 <select name="employee" value={form.employee} onChange={updateField} required>
-                  <option value="">Selecione</option>
+                  <option value="">{t('common.select')}</option>
                   {employees.map((employee) => (
                     <option key={employee.employee_id} value={employee.employee_id}>
                       {employee.employee_id} - {employeeLabel(employee)}
@@ -236,18 +223,18 @@ export default function InventoryRequests() {
               </label>
 
               <label className="inventory-field">
-                <span>Tipo</span>
+                <span>{t('inventory.type')}</span>
                 <select name="request_type" value={form.request_type} onChange={updateField}>
-                  {Object.entries(requestTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                  {['donation', 'purchase'].map((value) => (
+                    <option key={value} value={value}>{t(`inventory.requestTypes.${value}`)}</option>
                   ))}
                 </select>
               </label>
 
               <label className="inventory-field">
-                <span>Item</span>
+                <span>{t('inventory.item')}</span>
                 <select name="item" value={form.item} onChange={updateField} required>
-                  <option value="">Selecione</option>
+                  <option value="">{t('common.select')}</option>
                   {items.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.sku} - {item.name} / {item.size} - {item.unit_cost}
@@ -257,7 +244,7 @@ export default function InventoryRequests() {
               </label>
 
               <label className="inventory-field">
-                <span>Quantidade</span>
+                <span>{t('inventory.quantity')}</span>
                 <input
                   min="1"
                   name="quantity"
@@ -268,7 +255,7 @@ export default function InventoryRequests() {
               </label>
 
               <label className="inventory-field">
-                <span>Data</span>
+                <span>{t('common.date')}</span>
                 <input
                   name="request_date"
                   type="date"
@@ -279,7 +266,7 @@ export default function InventoryRequests() {
               </label>
 
               <label className="inventory-field">
-                <span>Motivo</span>
+                <span>{t('inventory.reason')}</span>
                 <input
                   name="reason"
                   value={form.reason}
@@ -289,15 +276,15 @@ export default function InventoryRequests() {
               </label>
 
               <div className="inventory-cost-preview">
-                <span>Custo estimado</span>
+                <span>{t('inventory.estimatedCost')}</span>
                 <strong>{estimatedTotal.toFixed(2)}</strong>
                 <small>
-                  {selectedItem ? `${selectedItem.unit_cost} x ${form.quantity || 0}` : 'Selecione um item'}
+                  {selectedItem ? `${selectedItem.unit_cost} x ${form.quantity || 0}` : t('inventory.selectItem')}
                 </small>
               </div>
 
               <label className="inventory-field full">
-                <span>Observações</span>
+                <span>{t('common.notes')}</span>
                 <textarea name="notes" rows={3} value={form.notes} onChange={updateField} />
               </label>
             </div>
@@ -309,7 +296,7 @@ export default function InventoryRequests() {
                 disabled={submitting}
                 onClick={() => setForm(getEmptyRequest())}
               >
-                Limpar
+                {t('common.clear')}
               </button>
               <button className="inventory-primary-button" type="submit" disabled={isSubmitDisabled}>
                 {submitting ? t('common.creating') : t('inventory.createRequest')}
@@ -321,8 +308,8 @@ export default function InventoryRequests() {
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">Workflow</p>
-              <h2>Solicitações cadastradas</h2>
+              <p className="inventory-eyebrow">{t('inventory.workflow')}</p>
+              <h2>{t('inventory.registeredRequests')}</h2>
             </div>
             <div className="inventory-panel-tools">
               <button
@@ -338,21 +325,21 @@ export default function InventoryRequests() {
           </div>
 
           {loading ? (
-            <p className="inventory-empty-state">Carregando solicitações...</p>
+            <p className="inventory-empty-state">{t('inventory.loadingRequests')}</p>
           ) : requests.length === 0 ? (
-            <p className="inventory-empty-state">Nenhuma solicitação cadastrada.</p>
+            <p className="inventory-empty-state">{t('inventory.emptyRequests')}</p>
           ) : (
             <div className="inventory-table-wrap">
               <table className="inventory-table compact">
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Funcionário</th>
-                    <th>Tipo</th>
-                    <th>Itens</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Ações</th>
+                    <th>{t('inventory.employee')}</th>
+                    <th>{t('inventory.type')}</th>
+                    <th>{t('inventory.items')}</th>
+                    <th>{t('common.total')}</th>
+                    <th>{t('common.status')}</th>
+                    <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -363,10 +350,10 @@ export default function InventoryRequests() {
                         <strong>{request.employee}</strong>
                         <br />
                         <span className="inventory-muted">
-                          {employeeMap[request.employee] || 'Funcionário'}
+                          {employeeMap[request.employee] || t('inventory.employee')}
                         </span>
                       </td>
-                      <td>{requestTypeLabels[request.request_type] || request.request_type}</td>
+                      <td>{t(`inventory.requestTypes.${request.request_type}`, request.request_type)}</td>
                       <td>
                         {request.items?.map((requestItem) => (
                           <div key={requestItem.id || requestItem.item}>
@@ -381,7 +368,7 @@ export default function InventoryRequests() {
                       <td>{request.total_cost}</td>
                       <td>
                         <span className={`inventory-badge status-${request.status}`}>
-                          {statusLabels[request.status] || request.status}
+                          {t(`inventory.statuses.${request.status}`, request.status)}
                         </span>
                       </td>
                       <td>

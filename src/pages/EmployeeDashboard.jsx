@@ -17,7 +17,7 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="master-shell">
-      <aside className="master-sidebar" aria-label="Navegação principal">
+      <aside className="master-sidebar" aria-label={t('nav.dashboard')}>
         <div className="master-brand">
           <span className="master-brand-mark">FH</span>
           <div>
@@ -52,21 +52,21 @@ export default function EmployeeDashboard() {
           </div>
         </header>
 
-        <section className="master-summary" aria-label="Resumo do módulo">
+        <section className="master-summary" aria-label={t('employees.module')}>
           <article>
-            <span>Status</span>
-            <strong>Em implantação</strong>
-            <small>Primeiro módulo operacional</small>
+            <span>{t('employees.summaryStatus')}</span>
+            <strong>{t('employees.summaryStatusValue')}</strong>
+            <small>{t('employees.summaryStatusDetail')}</small>
           </article>
           <article>
-            <span>Fonte principal</span>
-            <strong>Master</strong>
-            <small>Dados base dos operadores</small>
+            <span>{t('employees.summarySource')}</span>
+            <strong>{t('employees.summarySourceValue')}</strong>
+            <small>{t('employees.summarySourceDetail')}</small>
           </article>
           <article>
-            <span>Próximos usos</span>
-            <strong>Escalas</strong>
-            <small>Moradia e relatórios</small>
+            <span>{t('employees.summaryNextUses')}</span>
+            <strong>{t('employees.summaryNextUsesValue')}</strong>
+            <small>{t('employees.summaryNextUsesDetail')}</small>
           </article>
         </section>
 

@@ -15,7 +15,7 @@ export default function MedicalLayout({ children, title, subtitle, summary }) {
 
   return (
     <div className="inventory-shell">
-      <aside className="inventory-sidebar" aria-label="Navegação principal">
+      <aside className="inventory-sidebar" aria-label={t('nav.dashboard')}>
         <div className="inventory-brand">
           <span className="inventory-brand-mark">FH</span>
           <div>
@@ -48,7 +48,7 @@ export default function MedicalLayout({ children, title, subtitle, summary }) {
           </div>
         </header>
 
-        <nav className="inventory-tabs" aria-label="Medical">
+        <nav className="inventory-tabs" aria-label={t('medical.module')}>
           <Link
             className={location.pathname === '/medical/requests' ? 'active' : ''}
             to="/medical/requests"
@@ -64,7 +64,7 @@ export default function MedicalLayout({ children, title, subtitle, summary }) {
         </nav>
 
         {summary ? (
-          <section className="inventory-summary" aria-label="Resumo do módulo">
+          <section className="inventory-summary" aria-label={t('medical.module')}>
             {summary.map((item) => (
               <article key={item.label}>
                 <span>{item.label}</span>

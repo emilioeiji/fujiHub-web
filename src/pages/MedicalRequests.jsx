@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getLocalizedName } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import MedicalLayout from './MedicalLayout';
 
@@ -20,20 +21,6 @@ function getEmptyRequest() {
   };
 }
 
-const statusLabels = {
-  requested: 'Solicitado',
-  triaged: 'Triado',
-  in_progress: 'Em atendimento',
-  completed: 'Concluído',
-  cancelled: 'Cancelado',
-};
-
-const severityLabels = {
-  low: 'Baixa',
-  medium: 'Média',
-  urgent: 'Urgente',
-};
-
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.results)) return data.results;
@@ -50,11 +37,11 @@ async function readJson(res) {
   }
 }
 
-function formatApiMessage(data, fallback) {
+function formatApiMessage(data, fallback, permissionMessage) {
   if (!data) return fallback;
   if (typeof data.detail === 'string') {
     if (data.detail.includes('permission')) {
-      return 'Seu perfil não tem permissão para executar esta ação.';
+      return permissionMessage;
     }
     return data.detail;
   }
@@ -88,7 +75,7 @@ function toApiDateTime(value) {
 }
 
 export default function MedicalRequests() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [requests, setRequests] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [reasons, setReasons] = useState([]);
@@ -106,11 +93,11 @@ export default function MedicalRequests() {
     const urgent = requests.filter((request) => request.severity === 'urgent').length;
 
     return [
-      { label: 'Solicitações', value: requests.length, detail: 'Registros carregados' },
-      { label: 'Solicitadas', value: requested, detail: 'Aguardando triagem' },
-      { label: 'Urgentes', value: urgent, detail: 'Atenção operacional' },
+      { label: t('medical.requests'), value: requests.length, detail: t('medical.loadedRecords') },
+      { label: t('medical.statuses.requested'), value: requested, detail: t('medical.waitingTriage') },
+      { label: t('medical.severities.urgent'), value: urgent, detail: t('medical.operationalAttention') },
     ];
-  }, [requests]);
+  }, [requests, t]);
 
   const loadData = async () => {
     setLoading(true);
@@ -132,7 +119,7 @@ export default function MedicalRequests() {
     }
 
     if (!requestsRes.ok || !employeesRes.ok || !reasonsRes.ok || !symptomsRes.ok || !destinationsRes.ok) {
-      setStatusMessage('Alguns dados médicos não puderam ser carregados.');
+      setStatusMessage(t('medical.someDataLoadError'));
       setIsError(true);
     } else {
       setStatusMessage('');
@@ -189,14 +176,14 @@ export default function MedicalRequests() {
     const data = await readJson(res);
 
     if (!res.ok) {
-      setStatusMessage(formatApiMessage(data, 'Revise os campos obrigatórios da solicitação médica.'));
+      setStatusMessage(formatApiMessage(data, t('medical.requestCreateError'), t('messages.permissionDenied')));
       setIsError(true);
       setSubmitting(false);
       return;
     }
 
     setForm(getEmptyRequest());
-    setStatusMessage('Solicitação médica criada com sucesso.');
+    setStatusMessage(t('medical.requestCreated'));
     await loadData();
     setSubmitting(false);
   };
@@ -208,18 +195,18 @@ export default function MedicalRequests() {
 
     const res = await authFetch(`${API_BASE_URL}/api/medical/requests/${requestId}/${action}/`, {
       method: 'POST',
-      body: JSON.stringify({ note: `Ação ${action} executada pela tela web` }),
+      body: JSON.stringify({ note: action }),
     });
     const data = await readJson(res);
 
     if (!res.ok) {
-      setStatusMessage(formatApiMessage(data, 'Esta ação não pode ser executada neste status.'));
+      setStatusMessage(formatApiMessage(data, t('medical.invalidTransition'), t('messages.permissionDenied')));
       setIsError(true);
       setActioning('');
       return;
     }
 
-    setStatusMessage('Solicitação médica atualizada.');
+    setStatusMessage(t('medical.requestUpdated'));
     await loadData();
     setActioning('');
   };
@@ -247,9 +234,9 @@ export default function MedicalRequests() {
           <form className="inventory-form" onSubmit={handleSubmit}>
             <div className="inventory-form-grid">
               <label className="inventory-field full">
-                <span>Funcionário</span>
+                <span>{t('medical.employee')}</span>
                 <select name="employee" value={form.employee} onChange={updateField} required>
-                  <option value="">Selecione</option>
+                  <option value="">{t('common.select')}</option>
                   {employees.map((employee) => (
                     <option key={employee.employee_id} value={employee.employee_id}>
                       {employee.employee_id} - {employeeLabel(employee)}
@@ -261,9 +248,9 @@ export default function MedicalRequests() {
               <label className="inventory-field">
                 <span>{t('medical.reason')}</span>
                 <select name="reason" value={form.reason} onChange={updateField} required>
-                  <option value="">Selecione</option>
+                  <option value="">{t('common.select')}</option>
                   {reasons.map((reason) => (
-                    <option key={reason.id} value={reason.id}>{reason.name_pt}</option>
+                    <option key={reason.id} value={reason.id}>{getLocalizedName(reason, i18n)}</option>
                   ))}
                 </select>
               </label>
@@ -271,8 +258,8 @@ export default function MedicalRequests() {
               <label className="inventory-field">
                 <span>{t('medical.severity')}</span>
                 <select name="severity" value={form.severity} onChange={updateField}>
-                  {Object.entries(severityLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                  {['low', 'medium', 'urgent'].map((value) => (
+                    <option key={value} value={value}>{t(`medical.severities.${value}`)}</option>
                   ))}
                 </select>
               </label>
@@ -287,11 +274,11 @@ export default function MedicalRequests() {
                         type="checkbox"
                         onChange={() => toggleSymptom(symptom.id)}
                       />
-                      <span>{symptom.name_pt}</span>
+                      <span>{getLocalizedName(symptom, i18n)}</span>
                     </label>
                   ))}
                   {symptoms.length === 0 ? (
-                    <p className="inventory-muted">Nenhum sintoma ativo cadastrado.</p>
+                    <p className="inventory-muted">{t('medical.noActiveSymptoms')}</p>
                   ) : null}
                 </div>
               </label>
@@ -309,7 +296,7 @@ export default function MedicalRequests() {
               <label className="inventory-field">
                 <span>{t('medical.destination')}</span>
                 <select name="destination" value={form.destination} onChange={updateField}>
-                  <option value="">Sem destino definido</option>
+                  <option value="">{t('medical.noDestination')}</option>
                   {destinations.map((destination) => (
                     <option key={destination.id} value={destination.id}>{destination.name}</option>
                   ))}
@@ -362,7 +349,7 @@ export default function MedicalRequests() {
                 {t('common.clear')}
               </button>
               <button className="inventory-primary-button" type="submit" disabled={isSubmitDisabled}>
-                {submitting ? t('common.creating') : t('inventory.createRequest')}
+                {submitting ? t('common.creating') : t('medical.newRequest')}
               </button>
             </div>
           </form>
@@ -387,28 +374,28 @@ export default function MedicalRequests() {
             </div>
           </div>
 
-          <div className="inventory-flow" aria-label="Fluxo do atendimento médico">
-            <span>Solicitado</span>
-            <span>Triado</span>
-            <span>Em atendimento</span>
-            <span>Concluído</span>
+          <div className="inventory-flow" aria-label={t('medical.workflow')}>
+            <span>{t('medical.flow.requested')}</span>
+            <span>{t('medical.flow.triaged')}</span>
+            <span>{t('medical.flow.inProgress')}</span>
+            <span>{t('medical.flow.completed')}</span>
           </div>
 
           {loading ? (
-            <p className="inventory-empty-state">Carregando solicitações médicas...</p>
+            <p className="inventory-empty-state">{t('medical.loadingRequests')}</p>
           ) : requests.length === 0 ? (
-            <p className="inventory-empty-state">Nenhuma solicitação médica cadastrada.</p>
+            <p className="inventory-empty-state">{t('medical.emptyRequests')}</p>
           ) : (
             <div className="inventory-table-wrap">
               <table className="inventory-table compact">
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Funcionário</th>
-                    <th>Motivo</th>
-                    <th>Gravidade</th>
-                    <th>Status</th>
-                    <th>Ações</th>
+                    <th>{t('medical.employee')}</th>
+                    <th>{t('medical.reason')}</th>
+                    <th>{t('medical.severity')}</th>
+                    <th>{t('common.status')}</th>
+                    <th>{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -419,18 +406,18 @@ export default function MedicalRequests() {
                         <strong>{request.employee}</strong>
                         <br />
                         <span className="inventory-muted">
-                          {request.employee_display?.name_en || request.employee_display?.name_jp || 'Funcionário'}
+                          {request.employee_display?.name_en || request.employee_display?.name_jp || t('medical.employee')}
                         </span>
                       </td>
-                      <td>{request.reason_detail?.name_pt || request.reason}</td>
+                      <td>{getLocalizedName(request.reason_detail, i18n, request.reason)}</td>
                       <td>
                         <span className={`inventory-badge severity-${request.severity}`}>
-                          {severityLabels[request.severity] || request.severity}
+                          {t(`medical.severities.${request.severity}`, request.severity)}
                         </span>
                       </td>
                       <td>
                         <span className={`inventory-badge status-${request.status}`}>
-                          {statusLabels[request.status] || request.status}
+                          {t(`medical.statuses.${request.status}`, request.status)}
                         </span>
                       </td>
                       <td>

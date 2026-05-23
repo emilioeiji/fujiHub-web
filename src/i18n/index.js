@@ -8,10 +8,17 @@ export const supportedLanguages = [
   { code: 'ja-JP', label: '日本語', shortLabel: 'JA' },
 ];
 
+export function isSupportedLanguage(language) {
+  return supportedLanguages.some((supportedLanguage) => supportedLanguage.code === language);
+}
+
+export function changeAppLanguage(language) {
+  if (!isSupportedLanguage(language)) return Promise.resolve();
+  return i18n.changeLanguage(language);
+}
+
 const storedLanguage = localStorage.getItem('fujihub.language');
-const initialLanguage = supportedLanguages.some((language) => language.code === storedLanguage)
-  ? storedLanguage
-  : 'pt-BR';
+const initialLanguage = isSupportedLanguage(storedLanguage) ? storedLanguage : 'pt-BR';
 
 i18n.use(initReactI18next).init({
   resources: {

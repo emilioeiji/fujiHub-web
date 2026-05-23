@@ -1,31 +1,33 @@
 import { useEmployees } from '../hooks/useEmployees';
+import { useTranslation } from 'react-i18next';
 
 export default function EmployeeList() {
+  const { t } = useTranslation();
   const { employees, loading, deleteEmployee } = useEmployees();
 
   return (
     <section className="master-panel employee-list-panel">
       <div className="master-panel-header">
         <div>
-          <p className="master-eyebrow">Registros</p>
-          <h2>Funcionários cadastrados</h2>
+          <p className="master-eyebrow">{t('employees.records')}</p>
+          <h2>{t('employees.registeredEmployees')}</h2>
         </div>
         <span className="master-count">{loading ? '...' : employees.length}</span>
       </div>
 
       {loading ? (
-        <p className="master-empty-state">Carregando funcionários...</p>
+        <p className="master-empty-state">{t('employees.loadingEmployees')}</p>
       ) : employees.length === 0 ? (
-        <p className="master-empty-state">Nenhum funcionário cadastrado até o momento.</p>
+        <p className="master-empty-state">{t('employees.emptyEmployees')}</p>
       ) : (
         <div className="master-table-wrap">
           <table className="master-table">
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Nome</th>
-                <th>Departamento</th>
-                <th>Ações</th>
+                <th>{t('common.name')}</th>
+                <th>{t('employees.department')}</th>
+                <th>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -40,7 +42,7 @@ export default function EmployeeList() {
                       type="button"
                       onClick={() => deleteEmployee(emp.employee_id)}
                     >
-                      Excluir
+                      {t('employees.delete')}
                     </button>
                   </td>
                 </tr>

@@ -5,54 +5,70 @@ import LanguageSelector from '../components/LanguageSelector';
 import { authFetch } from '../utils/authFetch';
 import './Dashboard.css';
 
-const modules = [
-  {
-    title: 'Funcionários',
-    description: 'Cadastro master, dados cadastrais e acompanhamento dos operadores.',
-    status: 'Em implantação',
-    to: '/employees',
-  },
-  {
-    title: 'Uniformes',
-    description: 'Cadastro de itens, solicitações e workflow de entrega de uniformes.',
-    status: 'Inicial',
-    to: '/inventory/items',
-  },
-  {
-    title: 'Atendimento médico',
-    description: 'Solicitações internas, triagem e acompanhamento operacional de saúde.',
-    status: 'Inicial',
-    to: '/medical/requests',
-  },
-  {
-    title: 'Escalas e operações',
-    description: 'Visão operacional de turnos, postos e disponibilidade da equipe.',
-    status: 'Planejado',
-  },
-  {
-    title: 'Moradia e apoio',
-    description: 'Controle de alojamentos, vínculos e informações de suporte.',
-    status: 'Planejado',
-  },
-  {
-    title: 'Relatórios',
-    description: 'Indicadores gerenciais para tomada de decisão e auditoria interna.',
-    status: 'Planejado',
-  },
-];
-
-const indicators = [
-  { label: 'Operadores ativos', value: '--', detail: 'Aguardando integração' },
-  { label: 'Cadastros pendentes', value: '--', detail: 'Dados do módulo master' },
-  { label: 'Ocorrências abertas', value: '--', detail: 'Módulo futuro' },
-  { label: 'Alertas de operação', value: '--', detail: 'Módulo futuro' },
-];
-
 export default function Dashboard() {
   const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
-  const [profileStatus, setProfileStatus] = useState(t('dashboard.loadingSession'));
+  const [profileStatusKey, setProfileStatusKey] = useState('dashboard.loadingSession');
   const navigate = useNavigate();
+
+  const indicators = [
+    {
+      label: t('dashboard.indicators.activeOperators'),
+      value: '--',
+      detail: t('dashboard.indicators.waitingIntegration'),
+    },
+    {
+      label: t('dashboard.indicators.pendingRecords'),
+      value: '--',
+      detail: t('dashboard.indicators.masterModuleData'),
+    },
+    {
+      label: t('dashboard.indicators.openOccurrences'),
+      value: '--',
+      detail: t('dashboard.indicators.futureModule'),
+    },
+    {
+      label: t('dashboard.indicators.operationAlerts'),
+      value: '--',
+      detail: t('dashboard.indicators.futureModule'),
+    },
+  ];
+
+  const modules = [
+    {
+      title: t('dashboard.moduleCards.employeesTitle'),
+      description: t('dashboard.moduleCards.employeesDescription'),
+      status: t('dashboard.moduleCards.statusImplementing'),
+      to: '/employees',
+    },
+    {
+      title: t('dashboard.moduleCards.inventoryTitle'),
+      description: t('dashboard.moduleCards.inventoryDescription'),
+      status: t('dashboard.moduleCards.statusInitial'),
+      to: '/inventory/items',
+    },
+    {
+      title: t('dashboard.moduleCards.medicalTitle'),
+      description: t('dashboard.moduleCards.medicalDescription'),
+      status: t('dashboard.moduleCards.statusInitial'),
+      to: '/medical/requests',
+    },
+    {
+      title: t('dashboard.moduleCards.operationsTitle'),
+      description: t('dashboard.moduleCards.operationsDescription'),
+      status: t('dashboard.moduleCards.statusPlanned'),
+    },
+    {
+      title: t('dashboard.moduleCards.housingTitle'),
+      description: t('dashboard.moduleCards.housingDescription'),
+      status: t('dashboard.moduleCards.statusPlanned'),
+    },
+    {
+      title: t('dashboard.moduleCards.reportsTitle'),
+      description: t('dashboard.moduleCards.reportsDescription'),
+      status: t('dashboard.moduleCards.statusPlanned'),
+    },
+  ];
 
   useEffect(() => {
     (async () => {
@@ -60,7 +76,7 @@ export default function Dashboard() {
 
       if (res.ok) {
         setProfile(await res.json());
-        setProfileStatus(t('dashboard.sessionActive'));
+        setProfileStatusKey('dashboard.sessionActive');
         return;
       }
 
@@ -69,7 +85,7 @@ export default function Dashboard() {
         return;
       }
 
-      setProfileStatus(t('dashboard.sessionLocal'));
+      setProfileStatusKey('dashboard.sessionLocal');
     })();
   }, [navigate]);
 
@@ -80,7 +96,7 @@ export default function Dashboard() {
 
   return (
     <div className="erp-shell">
-      <aside className="erp-sidebar" aria-label="Navegação principal">
+      <aside className="erp-sidebar" aria-label={t('nav.dashboard')}>
         <div className="erp-brand">
           <span className="erp-brand-mark">FH</span>
           <div>
@@ -109,7 +125,7 @@ export default function Dashboard() {
           </div>
 
           <div className="erp-session">
-            <span>{profileStatus}</span>
+            <span>{t(profileStatusKey)}</span>
             <strong>{profile?.username || t('dashboard.loggedUser')}</strong>
             <LanguageSelector compact />
             <button type="button" onClick={handleLogout}>{t('nav.logout')}</button>
@@ -136,21 +152,20 @@ export default function Dashboard() {
               <Link className="erp-primary-action" to="/employees">{t('nav.employees')}</Link>
             </div>
             <p>
-              O primeiro módulo ativo concentra o cadastro base dos operadores. Ele será a fonte
-              principal para os próximos controles de escala, moradia, documentos e relatórios.
+              {t('dashboard.employeeMasterDescription')}
             </p>
             <div className="erp-progress-list">
               <div>
                 <span>1</span>
-                <p>Cadastro master</p>
+                <p>{t('dashboard.progressMaster')}</p>
               </div>
               <div>
                 <span>2</span>
-                <p>Dados complementares</p>
+                <p>{t('dashboard.progressComplement')}</p>
               </div>
               <div>
                 <span>3</span>
-                <p>Operação e relatórios</p>
+                <p>{t('dashboard.progressOperations')}</p>
               </div>
             </div>
           </div>

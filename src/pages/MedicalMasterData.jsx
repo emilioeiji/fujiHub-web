@@ -25,11 +25,11 @@ async function readJson(res) {
   }
 }
 
-function formatApiMessage(data, fallback) {
+function formatApiMessage(data, fallback, permissionMessage) {
   if (!data) return fallback;
   if (typeof data.detail === 'string') {
     if (data.detail.includes('permission')) {
-      return 'Seu perfil não tem permissão para alterar estes cadastros.';
+      return permissionMessage;
     }
     return data.detail;
   }
@@ -42,19 +42,19 @@ function formatApiMessage(data, fallback) {
   return `${field}: ${message}`;
 }
 
-function MasterDataTable({ columns, items, title }) {
+function MasterDataTable({ columns, emptyMessage, items, title, t }) {
   return (
     <div className="inventory-panel">
       <div className="inventory-panel-header">
         <div>
-          <p className="inventory-eyebrow">Lista</p>
+          <p className="inventory-eyebrow">{t('medical.master.list')}</p>
           <h2>{title}</h2>
         </div>
         <span className="inventory-status">{items.length}</span>
       </div>
 
       {items.length === 0 ? (
-        <p className="inventory-empty-state">Nenhum cadastro encontrado.</p>
+        <p className="inventory-empty-state">{emptyMessage}</p>
       ) : (
         <div className="inventory-table-wrap">
           <table className="inventory-table compact">
@@ -108,7 +108,7 @@ export default function MedicalMasterData() {
     if (destinationsRes.ok) setDestinations(normalizeList(await destinationsRes.json()));
 
     if (!reasonsRes.ok || !symptomsRes.ok || !destinationsRes.ok) {
-      setStatusMessage('Não foi possível carregar todos os cadastros médicos.');
+      setStatusMessage(t('medical.master.loadError'));
       setIsError(true);
     } else {
       setStatusMessage('');
@@ -139,14 +139,18 @@ export default function MedicalMasterData() {
     const data = await readJson(res);
 
     if (!res.ok) {
-      setStatusMessage(formatApiMessage(data, `Revise os campos para cadastrar ${label}.`));
+      setStatusMessage(formatApiMessage(
+        data,
+        t('medical.master.createError', { label }),
+        t('messages.permissionDeniedMasterData')
+      ));
       setIsError(true);
       setSubmitting('');
       return;
     }
 
     reset();
-    setStatusMessage(`${label} cadastrado com sucesso.`);
+    setStatusMessage(t('medical.master.created', { label }));
     await loadData();
     setSubmitting('');
   };
@@ -156,16 +160,16 @@ export default function MedicalMasterData() {
       title={t('medical.masterTitle')}
       subtitle={t('medical.masterSubtitle')}
       summary={[
-        { label: 'Motivos', value: reasons.length, detail: 'Tipos de solicitação' },
-        { label: 'Sintomas', value: symptoms.length, detail: 'Lista selecionável' },
-        { label: 'Destinos', value: destinations.length, detail: 'Locais de atendimento' },
+        { label: t('medical.master.reasons'), value: reasons.length, detail: t('medical.master.requestTypes') },
+        { label: t('medical.master.symptoms'), value: symptoms.length, detail: t('medical.master.selectableList') },
+        { label: t('medical.master.destinations'), value: destinations.length, detail: t('medical.master.servicePlaces') },
       ]}
     >
       <section className="inventory-workspace">
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">Novo cadastro</p>
+              <p className="inventory-eyebrow">{t('medical.master.newRecord')}</p>
               <h2>Master data</h2>
             </div>
             <div className="inventory-panel-tools">
@@ -181,26 +185,26 @@ export default function MedicalMasterData() {
           <form
             className="inventory-form"
             onSubmit={(event) =>
-              submitMasterData(event, 'reasons', reasonForm, () => setReasonForm(emptyReason), 'motivo')
+              submitMasterData(event, 'reasons', reasonForm, () => setReasonForm(emptyReason), t('medical.master.reason'))
             }
           >
             <div className="inventory-form-grid">
               <label className="inventory-field">
-                <span>Código do motivo</span>
+                <span>{t('medical.master.reasonCode')}</span>
                 <input name="code" value={reasonForm.code} onChange={updateForm(setReasonForm)} required />
               </label>
               <label className="inventory-field">
-                <span>Nome PT</span>
+                <span>{t('medical.master.namePt')}</span>
                 <input name="name_pt" value={reasonForm.name_pt} onChange={updateForm(setReasonForm)} required />
               </label>
               <label className="inventory-field">
-                <span>Nome JP</span>
+                <span>{t('medical.master.nameJp')}</span>
                 <input name="name_jp" value={reasonForm.name_jp} onChange={updateForm(setReasonForm)} required />
               </label>
             </div>
             <div className="inventory-form-actions">
               <button className="inventory-primary-button" type="submit" disabled={Boolean(submitting)}>
-                {submitting === 'reasons' ? 'Salvando...' : 'Cadastrar motivo'}
+                {submitting === 'reasons' ? t('common.saving') : t('medical.master.createReason')}
               </button>
             </div>
           </form>
@@ -208,26 +212,26 @@ export default function MedicalMasterData() {
           <form
             className="inventory-form"
             onSubmit={(event) =>
-              submitMasterData(event, 'symptoms', symptomForm, () => setSymptomForm(emptySymptom), 'sintoma')
+              submitMasterData(event, 'symptoms', symptomForm, () => setSymptomForm(emptySymptom), t('medical.master.symptom'))
             }
           >
             <div className="inventory-form-grid">
               <label className="inventory-field">
-                <span>Código do sintoma</span>
+                <span>{t('medical.master.symptomCode')}</span>
                 <input name="code" value={symptomForm.code} onChange={updateForm(setSymptomForm)} required />
               </label>
               <label className="inventory-field">
-                <span>Nome PT</span>
+                <span>{t('medical.master.namePt')}</span>
                 <input name="name_pt" value={symptomForm.name_pt} onChange={updateForm(setSymptomForm)} required />
               </label>
               <label className="inventory-field">
-                <span>Nome JP</span>
+                <span>{t('medical.master.nameJp')}</span>
                 <input name="name_jp" value={symptomForm.name_jp} onChange={updateForm(setSymptomForm)} required />
               </label>
             </div>
             <div className="inventory-form-actions">
               <button className="inventory-primary-button" type="submit" disabled={Boolean(submitting)}>
-                {submitting === 'symptoms' ? 'Salvando...' : 'Cadastrar sintoma'}
+                {submitting === 'symptoms' ? t('common.saving') : t('medical.master.createSymptom')}
               </button>
             </div>
           </form>
@@ -240,13 +244,13 @@ export default function MedicalMasterData() {
                 'destinations',
                 destinationForm,
                 () => setDestinationForm(emptyDestination),
-                'destino'
+                t('medical.master.destination')
               )
             }
           >
             <div className="inventory-form-grid">
               <label className="inventory-field">
-                <span>Código do destino</span>
+                <span>{t('medical.master.destinationCode')}</span>
                 <input
                   name="code"
                   value={destinationForm.code}
@@ -255,21 +259,21 @@ export default function MedicalMasterData() {
                 />
               </label>
               <label className="inventory-field">
-                <span>Nome</span>
+                <span>{t('common.name')}</span>
                 <input name="name" value={destinationForm.name} onChange={updateForm(setDestinationForm)} required />
               </label>
               <label className="inventory-field">
-                <span>Endereço</span>
+                <span>{t('medical.master.address')}</span>
                 <input name="address" value={destinationForm.address} onChange={updateForm(setDestinationForm)} />
               </label>
               <label className="inventory-field">
-                <span>Telefone</span>
+                <span>{t('medical.master.phone')}</span>
                 <input name="phone" value={destinationForm.phone} onChange={updateForm(setDestinationForm)} />
               </label>
             </div>
             <div className="inventory-form-actions">
               <button className="inventory-primary-button" type="submit" disabled={Boolean(submitting)}>
-                {submitting === 'destinations' ? 'Salvando...' : 'Cadastrar destino'}
+                {submitting === 'destinations' ? t('common.saving') : t('medical.master.createDestination')}
               </button>
             </div>
           </form>
@@ -277,30 +281,36 @@ export default function MedicalMasterData() {
 
         <div className="inventory-stack">
           <MasterDataTable
-            title="Motivos"
+            title={t('medical.master.reasons')}
+            emptyMessage={t('medical.master.empty')}
+            t={t}
             items={reasons}
             columns={[
-              { key: 'code', label: 'Código' },
-              { key: 'name_pt', label: 'Nome PT' },
-              { key: 'name_jp', label: 'Nome JP' },
+              { key: 'code', label: t('common.code') },
+              { key: 'name_pt', label: t('medical.master.namePt') },
+              { key: 'name_jp', label: t('medical.master.nameJp') },
             ]}
           />
           <MasterDataTable
-            title="Sintomas"
+            title={t('medical.master.symptoms')}
+            emptyMessage={t('medical.master.empty')}
+            t={t}
             items={symptoms}
             columns={[
-              { key: 'code', label: 'Código' },
-              { key: 'name_pt', label: 'Nome PT' },
-              { key: 'name_jp', label: 'Nome JP' },
+              { key: 'code', label: t('common.code') },
+              { key: 'name_pt', label: t('medical.master.namePt') },
+              { key: 'name_jp', label: t('medical.master.nameJp') },
             ]}
           />
           <MasterDataTable
-            title="Destinos"
+            title={t('medical.master.destinations')}
+            emptyMessage={t('medical.master.empty')}
+            t={t}
             items={destinations}
             columns={[
-              { key: 'code', label: 'Código' },
-              { key: 'name', label: 'Nome' },
-              { key: 'phone', label: 'Telefone' },
+              { key: 'code', label: t('common.code') },
+              { key: 'name', label: t('common.name') },
+              { key: 'phone', label: t('medical.master.phone') },
             ]}
           />
         </div>
