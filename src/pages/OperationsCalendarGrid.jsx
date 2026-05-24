@@ -63,6 +63,8 @@ function emptyCellForm() {
     work_time_code: '',
     operational_code: '',
     overtime_minutes: 0,
+    leave_time: '',
+    time_note: '',
     memo: '',
     raw_value: '',
   };
@@ -102,6 +104,7 @@ export default function OperationsCalendarGrid() {
   const [assignments, setAssignments] = useState([]);
   const [cells, setCells] = useState([]);
   const [summaryRows, setSummaryRows] = useState([]);
+  const [assignmentTotals, setAssignmentTotals] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [positions, setPositions] = useState([]);
   const [buildingFloors, setBuildingFloors] = useState([]);
@@ -164,6 +167,15 @@ export default function OperationsCalendarGrid() {
     ];
   }, [assignments.length, cells.length, summaryRows.length, t]);
 
+  const assignmentTotalsMap = useMemo(
+    () =>
+      assignmentTotals.reduce((acc, item) => {
+        acc[item.assignment_id] = item;
+        return acc;
+      }, {}),
+    [assignmentTotals]
+  );
+
   const rotationStyleByGroup = useMemo(() => {
     return rotationStyles.reduce((acc, style) => {
       acc[style.group_code] = style;
@@ -213,6 +225,7 @@ export default function OperationsCalendarGrid() {
       assignmentsRes,
       cellsRes,
       summaryRes,
+      assignmentTotalsRes,
       employeesRes,
       positionsRes,
       buildingFloorsRes,
@@ -226,6 +239,7 @@ export default function OperationsCalendarGrid() {
       authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignments/`),
       authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/cells/`),
       authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/summary/`),
+      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignment-totals/`),
       authFetch(`${API_BASE_URL}/api/employees/`),
       authFetch(`${API_BASE_URL}/api/operations/positions/`),
       authFetch(`${API_BASE_URL}/api/buildingfloors/`),
@@ -259,6 +273,7 @@ export default function OperationsCalendarGrid() {
     if (assignmentsRes.ok) setAssignments(normalizeList(await assignmentsRes.json()));
     if (cellsRes.ok) setCells(normalizeList(await cellsRes.json()));
     if (summaryRes.ok) setSummaryRows(normalizeList(await summaryRes.json()));
+    if (assignmentTotalsRes.ok) setAssignmentTotals(normalizeList(await assignmentTotalsRes.json()));
     if (employeesRes.ok) setEmployees(normalizeList(await employeesRes.json()));
     if (positionsRes.ok) {
       const loadedPositions = normalizeList(await positionsRes.json());
@@ -280,6 +295,7 @@ export default function OperationsCalendarGrid() {
       !assignmentsRes.ok ||
       !cellsRes.ok ||
       !summaryRes.ok ||
+      !assignmentTotalsRes.ok ||
       !employeesRes.ok ||
       !positionsRes.ok ||
       !buildingFloorsRes.ok ||
@@ -343,6 +359,8 @@ export default function OperationsCalendarGrid() {
           work_time_code: existing.work_time_code || '',
           operational_code: existing.operational_code || '',
           overtime_minutes: existing.overtime_minutes || 0,
+          leave_time: existing.leave_time || '',
+          time_note: existing.time_note || '',
           memo: existing.memo || '',
           raw_value: existing.raw_value || '',
         }
@@ -566,6 +584,8 @@ export default function OperationsCalendarGrid() {
       work_time_code: cellForm.work_time_code ? Number(cellForm.work_time_code) : null,
       operational_code: cellForm.operational_code ? Number(cellForm.operational_code) : null,
       overtime_minutes: Number(cellForm.overtime_minutes || 0),
+      leave_time: cellForm.leave_time || null,
+      time_note: cellForm.time_note || '',
     };
 
     const existingId = selectedCell?.existing?.id;
@@ -848,6 +868,9 @@ export default function OperationsCalendarGrid() {
                     <th className="sticky-col jp">和名</th>
                     <th className="sticky-col code">{t('operations.code')}</th>
                     <th className="sticky-col category">{t('operations.category')}</th>
+                    <th className="sticky-col regular">所定</th>
+                    <th className="sticky-col overtime">残業</th>
+                    <th className="sticky-col overload">過重</th>
                     {days.map((day) => (
                       <th className={`day-col ${new Date(day.date).getDay() === 0 ? 'sunday-head' : ''}`} key={day.date}>
                         {day.day}
@@ -861,6 +884,7 @@ export default function OperationsCalendarGrid() {
                     const visualCode = getAssignmentVisualCode(assignment);
                     const visual = visualCategoryByCode[visualCode];
                     const rowClass = visual?.target_column === 'row' || visualCode === 'trainee' ? 'row-trainee' : '';
+                    const totals = assignmentTotalsMap[assignment.id];
                     return (
                     <tr key={assignment.id} className={rowClass}>
                       <td className="sticky-col scd">{assignment.display_order}</td>
@@ -896,6 +920,9 @@ export default function OperationsCalendarGrid() {
                         {employeeCode(assignment.employee_detail)}
                       </td>
                       <td className="sticky-col category">{t(`operations.categories.${assignment.operational_category}`)}</td>
+                      <td className="sticky-col regular">{totals?.scheduled_regular_formatted || '0:00'}</td>
+                      <td className="sticky-col overtime">{totals?.actual_overtime_formatted || '0:00'}</td>
+                      <td className="sticky-col overload">{totals?.overload_formatted || '0:00'}</td>
                       {days.map((day) => {
                         const cell = cellMap[`${assignment.id}-${day.date}`];
                         const background =
@@ -998,6 +1025,16 @@ export default function OperationsCalendarGrid() {
                   <label className="inventory-field">
                     <span>{t('operations.rawValue')}</span>
                     <input name="raw_value" value={cellForm.raw_value} onChange={updateCellField} />
+                  </label>
+
+                  <label className="inventory-field">
+                    <span>{t('operations.leaveTime')}</span>
+                    <input name="leave_time" type="time" value={cellForm.leave_time} onChange={updateCellField} />
+                  </label>
+
+                  <label className="inventory-field">
+                    <span>{t('operations.timeNote')}</span>
+                    <input name="time_note" value={cellForm.time_note} onChange={updateCellField} />
                   </label>
 
                   <label className="inventory-field">

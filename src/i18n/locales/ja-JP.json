@@ -389,6 +389,8 @@
     "operationalCode": "運用コード",
     "overtimeMinutes": "残業分",
     "rawValue": "セル表示値",
+    "leaveTime": "退勤時刻",
+    "timeNote": "時間メモ",
     "saveCell": "セルを保存",
     "cellSaveError": "セルを保存できませんでした。",
     "cellSaved": "セルを保存しました。",

@@ -389,6 +389,8 @@
     "operationalCode": "Código operacional",
     "overtimeMinutes": "Minutos extras",
     "rawValue": "Valor da célula",
+    "leaveTime": "Hora de saída",
+    "timeNote": "Nota de horário",
     "saveCell": "Salvar célula",
     "cellSaveError": "Não foi possível salvar a célula.",
     "cellSaved": "Célula salva com sucesso.",

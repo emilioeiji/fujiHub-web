@@ -88,6 +88,21 @@
   min-width: 120px;
 }
 
+.operations-calendar-table .regular {
+  left: 592px;
+  min-width: 86px;
+}
+
+.operations-calendar-table .overtime {
+  left: 678px;
+  min-width: 86px;
+}
+
+.operations-calendar-table .overload {
+  left: 764px;
+  min-width: 86px;
+}
+
 .operations-calendar-table .day-col {
   min-width: 74px;
   text-align: center;
