@@ -87,6 +87,13 @@ function emptyRequirementForm(defaultDate = '') {
   };
 }
 
+function emptyGenerateForm(year, month) {
+  return {
+    default_4x2_anchor_date: year && month ? `${year}-${String(month).padStart(2, '0')}-01` : '2026-05-30',
+    overwrite: false,
+  };
+}
+
 export default function OperationsCalendarGrid() {
   const { id } = useParams();
   const { i18n, t } = useTranslation();
@@ -102,6 +109,10 @@ export default function OperationsCalendarGrid() {
   const [assignmentForm, setAssignmentForm] = useState({
     employee: '',
     operational_category: 'normal',
+    work_pattern: '4x2',
+    rotation_group: 'A',
+    five_two_off_days: [5, 6],
+    default_position: '',
     start_date: '',
     display_order: 0,
     notes: '',
@@ -110,6 +121,9 @@ export default function OperationsCalendarGrid() {
   const [requirementForm, setRequirementForm] = useState(emptyRequirementForm());
   const [pasteText, setPasteText] = useState('');
   const [pasteResult, setPasteResult] = useState(null);
+  const [showGeneratePanel, setShowGeneratePanel] = useState(false);
+  const [generateForm, setGenerateForm] = useState(emptyGenerateForm());
+  const [generateResult, setGenerateResult] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [cellForm, setCellForm] = useState(emptyCellForm());
   const [loading, setLoading] = useState(true);
@@ -118,6 +132,7 @@ export default function OperationsCalendarGrid() {
   const [savingPosition, setSavingPosition] = useState(false);
   const [savingRequirement, setSavingRequirement] = useState(false);
   const [pastingCells, setPastingCells] = useState(false);
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
@@ -184,6 +199,10 @@ export default function OperationsCalendarGrid() {
         ...current,
         date: current.date || `${loadedCalendar.year}-${String(loadedCalendar.month).padStart(2, '0')}-01`,
       }));
+      setGenerateForm((current) => ({
+        ...current,
+        default_4x2_anchor_date: current.default_4x2_anchor_date || '2026-05-30',
+      }));
     }
     if (assignmentsRes.ok) setAssignments(normalizeList(await assignmentsRes.json()));
     if (cellsRes.ok) setCells(normalizeList(await cellsRes.json()));
@@ -245,6 +264,16 @@ export default function OperationsCalendarGrid() {
     setRequirementForm((current) => ({ ...current, [name]: value }));
   };
 
+  const updateGenerateField = (event) => {
+    const { name, value, checked, type } = event.target;
+    setGenerateForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const updateFiveTwoOffDays = (event) => {
+    const selected = Array.from(event.target.selectedOptions).map((option) => Number(option.value));
+    setAssignmentForm((current) => ({ ...current, five_two_off_days: selected }));
+  };
+
   const openCellEditor = (assignment, day) => {
     const existing = cellMap[`${assignment.id}-${day.date}`];
     const form = existing
@@ -277,6 +306,7 @@ export default function OperationsCalendarGrid() {
     const payload = {
       ...assignmentForm,
       display_order: Number(assignmentForm.display_order || 0),
+      default_position: assignmentForm.default_position ? Number(assignmentForm.default_position) : null,
     };
 
     const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignments/`, {
@@ -301,6 +331,32 @@ export default function OperationsCalendarGrid() {
     setStatusMessage(t('operations.assignmentCreated'));
     await loadData();
     setAddingAssignment(false);
+  };
+
+  const generateSchedule = async (event) => {
+    event.preventDefault();
+    setGeneratingSchedule(true);
+    setIsError(false);
+    setStatusMessage('');
+    setGenerateResult(null);
+
+    const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/generate-schedule/`, {
+      method: 'POST',
+      body: JSON.stringify(generateForm),
+    });
+    const data = await readJson(res);
+
+    if (!res.ok) {
+      setStatusMessage(formatApiMessage(data, t('operations.generateError')));
+      setIsError(true);
+      setGeneratingSchedule(false);
+      return;
+    }
+
+    setGenerateResult(data);
+    setStatusMessage(t('operations.generateDone'));
+    await loadData();
+    setGeneratingSchedule(false);
   };
 
   const createPosition = async (event) => {
@@ -483,6 +539,13 @@ export default function OperationsCalendarGrid() {
               <Link className="inventory-secondary-button" to={`/operations/calendars/${id}/print`}>
                 {t('operations.printView')}
               </Link>
+              <button
+                className="inventory-secondary-button"
+                type="button"
+                onClick={() => setShowGeneratePanel((current) => !current)}
+              >
+                {t('operations.generateSchedule')}
+              </button>
               <button className="inventory-secondary-button" type="button" disabled={loading} onClick={loadData}>
                 {loading ? t('common.refreshing') : t('common.refresh')}
               </button>
@@ -524,6 +587,56 @@ export default function OperationsCalendarGrid() {
             </label>
 
             <label className="inventory-field">
+              <span>{t('operations.workPattern')}</span>
+              <select name="work_pattern" value={assignmentForm.work_pattern} onChange={updateAssignmentField}>
+                <option value="4x2">4x2</option>
+                <option value="5x2">5x2</option>
+                <option value="manual">{t('operations.manual')}</option>
+              </select>
+            </label>
+
+            <label className="inventory-field">
+              <span>{t('operations.rotationGroup')}</span>
+              <select name="rotation_group" value={assignmentForm.rotation_group} onChange={updateAssignmentField}>
+                <option value="">{t('common.none')}</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+              </select>
+            </label>
+
+            <label className="inventory-field">
+              <span>{t('operations.defaultPosition')}</span>
+              <select name="default_position" value={assignmentForm.default_position} onChange={updateAssignmentField}>
+                <option value="">{t('common.none')}</option>
+                {positions.map((position) => (
+                  <option key={position.id} value={position.id}>
+                    {position.code} - {getLocalizedName(position, i18n)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="inventory-field">
+              <span>{t('operations.fiveTwoOffDays')}</span>
+              <select multiple value={assignmentForm.five_two_off_days.map(String)} onChange={updateFiveTwoOffDays}>
+                {[
+                  [0, t('operations.weekdays.mon')],
+                  [1, t('operations.weekdays.tue')],
+                  [2, t('operations.weekdays.wed')],
+                  [3, t('operations.weekdays.thu')],
+                  [4, t('operations.weekdays.fri')],
+                  [5, t('operations.weekdays.sat')],
+                  [6, t('operations.weekdays.sun')],
+                ].map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="inventory-field">
               <span>{t('operations.startDate')}</span>
               <input name="start_date" type="date" value={assignmentForm.start_date} onChange={updateAssignmentField} required />
             </label>
@@ -537,6 +650,51 @@ export default function OperationsCalendarGrid() {
               {addingAssignment ? t('common.creating') : t('operations.addEmployee')}
             </button>
           </form>
+
+          {showGeneratePanel ? (
+            <form className="operations-generate-panel" onSubmit={generateSchedule}>
+              <div>
+                <p className="inventory-eyebrow">{t('operations.generateSchedule')}</p>
+                <h2>{t('operations.generateTitle')}</h2>
+                <p>{t('operations.generateHint')}</p>
+              </div>
+
+              <label className="inventory-field">
+                <span>{t('operations.anchorDate')}</span>
+                <input
+                  name="default_4x2_anchor_date"
+                  type="date"
+                  value={generateForm.default_4x2_anchor_date}
+                  onChange={updateGenerateField}
+                />
+              </label>
+
+              <label className="operations-checkbox-field">
+                <input
+                  name="overwrite"
+                  type="checkbox"
+                  checked={generateForm.overwrite}
+                  onChange={updateGenerateField}
+                />
+                <span>{t('operations.overwriteExisting')}</span>
+              </label>
+
+              <div className="inventory-form-actions">
+                <button className="inventory-primary-button" type="submit" disabled={generatingSchedule || loading}>
+                  {generatingSchedule ? t('common.saving') : t('operations.confirmGenerate')}
+                </button>
+              </div>
+
+              {generateResult ? (
+                <div className="operations-paste-result">
+                  <span>{t('operations.created')}: <strong>{generateResult.created}</strong></span>
+                  <span>{t('operations.updated')}: <strong>{generateResult.updated}</strong></span>
+                  <span>{t('operations.skipped')}: <strong>{generateResult.skipped}</strong></span>
+                  <span>{t('operations.totalDays')}: <strong>{generateResult.total_days}</strong></span>
+                </div>
+              ) : null}
+            </form>
+          ) : null}
         </div>
 
         <div className="inventory-panel operations-grid-panel">
