@@ -147,7 +147,11 @@
     "workingDay": "勤務日",
     "absence": "欠勤扱い",
     "paidLeave": "有給扱い",
-    "affectsOvertime": "残業に影響"
+    "affectsOvertime": "残業に影響",
+    "affectsHolidayWork": "休日出勤に影響",
+    "allDepartments": "全部署",
+    "search": "検索",
+    "searchPlaceholder": "コード/名称/説明で絞り込み"
   },
   "employees": {
     "title": "従業員マスター登録",

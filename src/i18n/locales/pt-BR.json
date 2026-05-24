@@ -148,6 +148,11 @@
     "absence": "Ausência",
     "paidLeave": "Licença paga",
     "affectsOvertime": "Afeta hora extra"
+    ,
+    "affectsHolidayWork": "Afeta trabalho em folga",
+    "allDepartments": "Todos os departamentos",
+    "search": "Buscar",
+    "searchPlaceholder": "Filtrar por código/nome/descrição"
   },
   "employees": {
     "title": "Cadastro master de funcionários",

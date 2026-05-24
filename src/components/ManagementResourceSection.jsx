@@ -35,6 +35,15 @@ export default function ManagementResourceSection({
   const [editForm, setEditForm] = useState({});
 
   const visibleFields = useMemo(() => fields.filter((field) => !field.readOnly), [fields]);
+  const optionMaps = useMemo(() => {
+    const maps = {};
+    fields.forEach((field) => {
+      if (field.type === 'select' && Array.isArray(field.options)) {
+        maps[field.name] = new Map(field.options.map((opt) => [String(opt.value), opt.label]));
+      }
+    });
+    return maps;
+  }, [fields]);
 
   const loadItems = async () => {
     setLoading(true);
@@ -146,6 +155,33 @@ export default function ManagementResourceSection({
                     onChange={(event) => onCreateChange(field.name, event.target.checked)}
                     type="checkbox"
                   />
+                ) : field.type === 'select' ? (
+                  <select
+                    value={createForm[field.name] ?? ''}
+                    onChange={(event) => onCreateChange(field.name, event.target.value)}
+                    required={Boolean(field.required)}
+                  >
+                    <option value="">{t('common.select')}</option>
+                    {(field.options || []).map((option) => (
+                      <option key={String(option.value)} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : field.type === 'color' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: '8px' }}>
+                    <input
+                      type="color"
+                      value={createForm[field.name] || '#ffffff'}
+                      onChange={(event) => onCreateChange(field.name, event.target.value)}
+                    />
+                    <input
+                      type="text"
+                      value={createForm[field.name] ?? ''}
+                      onChange={(event) => onCreateChange(field.name, event.target.value)}
+                      required={Boolean(field.required)}
+                    />
+                  </div>
                 ) : (
                   <input
                     type={field.type || 'text'}
@@ -187,6 +223,31 @@ export default function ManagementResourceSection({
                           checked={Boolean(editForm[field.name])}
                           onChange={(event) => onEditChange(field.name, event.target.checked)}
                         />
+                      ) : field.type === 'select' ? (
+                        <select
+                          value={editForm[field.name] ?? ''}
+                          onChange={(event) => onEditChange(field.name, event.target.value)}
+                        >
+                          <option value="">{t('common.select')}</option>
+                          {(field.options || []).map((option) => (
+                            <option key={String(option.value)} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : field.type === 'color' ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr', gap: '8px' }}>
+                          <input
+                            type="color"
+                            value={editForm[field.name] || '#ffffff'}
+                            onChange={(event) => onEditChange(field.name, event.target.value)}
+                          />
+                          <input
+                            type="text"
+                            value={editForm[field.name] ?? ''}
+                            onChange={(event) => onEditChange(field.name, event.target.value)}
+                          />
+                        </div>
                       ) : (
                         <input
                           type={field.type || 'text'}
@@ -196,6 +257,22 @@ export default function ManagementResourceSection({
                       )
                     ) : field.render ? (
                       field.render(item[field.name], item)
+                    ) : field.type === 'color' ? (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            borderRadius: '4px',
+                            border: '1px solid #9fb3bc',
+                            backgroundColor: item[field.name] || '#ffffff',
+                            display: 'inline-block',
+                          }}
+                        />
+                        <span>{String(item[field.name] ?? '')}</span>
+                      </div>
+                    ) : field.type === 'select' ? (
+                      optionMaps[field.name]?.get(String(item[field.name] ?? '')) || String(item[field.name] ?? '')
                     ) : (
                       String(item[field.name] ?? '')
                     )}
