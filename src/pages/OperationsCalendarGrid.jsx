@@ -124,6 +124,8 @@ export default function OperationsCalendarGrid() {
   const [showGeneratePanel, setShowGeneratePanel] = useState(false);
   const [generateForm, setGenerateForm] = useState(emptyGenerateForm());
   const [generateResult, setGenerateResult] = useState(null);
+  const [showImportPanel, setShowImportPanel] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   const [selectedCell, setSelectedCell] = useState(null);
   const [cellForm, setCellForm] = useState(emptyCellForm());
   const [loading, setLoading] = useState(true);
@@ -133,6 +135,7 @@ export default function OperationsCalendarGrid() {
   const [savingRequirement, setSavingRequirement] = useState(false);
   const [pastingCells, setPastingCells] = useState(false);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  const [importingEmployees, setImportingEmployees] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
@@ -359,6 +362,32 @@ export default function OperationsCalendarGrid() {
     setGeneratingSchedule(false);
   };
 
+  const importEmployees = async (event) => {
+    event.preventDefault();
+    setImportingEmployees(true);
+    setIsError(false);
+    setStatusMessage('');
+    setImportResult(null);
+
+    const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/import-employees/`, {
+      method: 'POST',
+      body: JSON.stringify({ import_all: true }),
+    });
+    const data = await readJson(res);
+
+    if (!res.ok) {
+      setStatusMessage(formatApiMessage(data, t('operations.importError')));
+      setIsError(true);
+      setImportingEmployees(false);
+      return;
+    }
+
+    setImportResult(data);
+    setStatusMessage(t('operations.importDone'));
+    await loadData();
+    setImportingEmployees(false);
+  };
+
   const createPosition = async (event) => {
     event.preventDefault();
     setSavingPosition(true);
@@ -546,6 +575,13 @@ export default function OperationsCalendarGrid() {
               >
                 {t('operations.generateSchedule')}
               </button>
+              <button
+                className="inventory-secondary-button"
+                type="button"
+                onClick={() => setShowImportPanel((current) => !current)}
+              >
+                {t('operations.importEmployees')}
+              </button>
               <button className="inventory-secondary-button" type="button" disabled={loading} onClick={loadData}>
                 {loading ? t('common.refreshing') : t('common.refresh')}
               </button>
@@ -691,6 +727,40 @@ export default function OperationsCalendarGrid() {
                   <span>{t('operations.updated')}: <strong>{generateResult.updated}</strong></span>
                   <span>{t('operations.skipped')}: <strong>{generateResult.skipped}</strong></span>
                   <span>{t('operations.totalDays')}: <strong>{generateResult.total_days}</strong></span>
+                </div>
+              ) : null}
+            </form>
+          ) : null}
+
+          {showImportPanel ? (
+            <form className="operations-generate-panel" onSubmit={importEmployees}>
+              <div>
+                <p className="inventory-eyebrow">{t('operations.importEmployees')}</p>
+                <h2>{t('operations.importTitle')}</h2>
+                <p>{t('operations.importHint')}</p>
+              </div>
+
+              <div className="operations-import-summary">
+                <span>{t('employees.department')}</span>
+                <strong>{calendar?.department_detail?.code || calendar?.department || '-'}</strong>
+              </div>
+
+              <div className="operations-import-summary">
+                <span>{t('operations.availableEmployees')}</span>
+                <strong>{employees.length}</strong>
+              </div>
+
+              <div className="inventory-form-actions">
+                <button className="inventory-primary-button" type="submit" disabled={importingEmployees || loading}>
+                  {importingEmployees ? t('common.saving') : t('operations.confirmImport')}
+                </button>
+              </div>
+
+              {importResult ? (
+                <div className="operations-paste-result">
+                  <span>{t('operations.created')}: <strong>{importResult.created}</strong></span>
+                  <span>{t('operations.skipped')}: <strong>{importResult.skipped}</strong></span>
+                  <span>{t('operations.totalCandidates')}: <strong>{importResult.total_candidates}</strong></span>
                 </div>
               ) : null}
             </form>

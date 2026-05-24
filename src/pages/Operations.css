@@ -188,6 +188,24 @@
   height: 18px;
 }
 
+.operations-import-summary {
+  display: grid;
+  gap: 4px;
+  min-height: 42px;
+}
+
+.operations-import-summary span {
+  color: #53646c;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.operations-import-summary strong {
+  color: #17232d;
+  font-size: 1rem;
+}
+
 .inventory-badge.success {
   color: #1d6f42;
   background: #dff7e9;
