@@ -7,6 +7,11 @@ import InventoryRequests from './pages/InventoryRequests';
 import Login from './pages/Login';
 import MedicalMasterData from './pages/MedicalMasterData';
 import MedicalRequests from './pages/MedicalRequests';
+import ManagementDashboard from './pages/ManagementDashboard';
+import ManagementInventory from './pages/ManagementInventory';
+import ManagementMedical from './pages/ManagementMedical';
+import ManagementOperations from './pages/ManagementOperations';
+import ManagementUsers from './pages/ManagementUsers';
 import OperationsCalendarGrid from './pages/OperationsCalendarGrid';
 import OperationsCalendarPrint from './pages/OperationsCalendarPrint';
 import OperationsCalendars from './pages/OperationsCalendars';
@@ -55,6 +60,46 @@ export default function App() {
         element={
           <ProtectedRoute>
             <InventoryRequests />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/management"
+        element={
+          <ProtectedRoute>
+            <ManagementDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/management/users"
+        element={
+          <ProtectedRoute>
+            <ManagementUsers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/management/operations"
+        element={
+          <ProtectedRoute>
+            <ManagementOperations />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/management/inventory"
+        element={
+          <ProtectedRoute>
+            <ManagementInventory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/management/medical"
+        element={
+          <ProtectedRoute>
+            <ManagementMedical />
           </ProtectedRoute>
         }
       />

@@ -63,6 +63,11 @@ function emptyCellForm() {
     work_time_code: '',
     operational_code: '',
     overtime_minutes: 0,
+    start_time: '',
+    end_time: '',
+    break_minutes: 0,
+    crosses_midnight: false,
+    manual_time_override: false,
     leave_time: '',
     time_note: '',
     memo: '',
@@ -117,6 +122,7 @@ export default function OperationsCalendarGrid() {
     employee: '',
     operational_category: 'normal',
     work_pattern: '4x2',
+    shift_type: 'day',
     rotation_group: 'A',
     five_two_off_days: [5, 6],
     default_position: '',
@@ -324,8 +330,16 @@ export default function OperationsCalendarGrid() {
   };
 
   const updateCellField = (event) => {
-    const { name, value } = event.target;
-    setCellForm((current) => ({ ...current, [name]: value }));
+    const { name, value, checked, type } = event.target;
+    setCellForm((current) => ({
+      ...current,
+      [name]:
+        type === 'checkbox'
+          ? checked
+          : name === 'overtime_minutes' || name === 'break_minutes'
+            ? Number(value || 0)
+            : value,
+    }));
   };
 
   const updatePositionField = (event) => {
@@ -359,6 +373,11 @@ export default function OperationsCalendarGrid() {
           work_time_code: existing.work_time_code || '',
           operational_code: existing.operational_code || '',
           overtime_minutes: existing.overtime_minutes || 0,
+          start_time: existing.start_time || '',
+          end_time: existing.end_time || '',
+          break_minutes: existing.break_minutes ?? 0,
+          crosses_midnight: Boolean(existing.crosses_midnight),
+          manual_time_override: Boolean(existing.manual_time_override),
           leave_time: existing.leave_time || '',
           time_note: existing.time_note || '',
           memo: existing.memo || '',
@@ -584,6 +603,11 @@ export default function OperationsCalendarGrid() {
       work_time_code: cellForm.work_time_code ? Number(cellForm.work_time_code) : null,
       operational_code: cellForm.operational_code ? Number(cellForm.operational_code) : null,
       overtime_minutes: Number(cellForm.overtime_minutes || 0),
+      start_time: cellForm.start_time || null,
+      end_time: cellForm.end_time || null,
+      break_minutes: Number(cellForm.break_minutes || 0),
+      crosses_midnight: Boolean(cellForm.crosses_midnight),
+      manual_time_override: Boolean(cellForm.manual_time_override),
       leave_time: cellForm.leave_time || null,
       time_note: cellForm.time_note || '',
     };
@@ -706,6 +730,15 @@ export default function OperationsCalendarGrid() {
                 <option value="4x2">4x2</option>
                 <option value="5x2">5x2</option>
                 <option value="manual">{t('operations.manual')}</option>
+              </select>
+            </label>
+
+            <label className="inventory-field">
+              <span>{t('operations.shiftType')}</span>
+              <select name="shift_type" value={assignmentForm.shift_type} onChange={updateAssignmentField}>
+                <option value="day">{t('operations.shiftTypes.day')}</option>
+                <option value="night">{t('operations.shiftTypes.night')}</option>
+                <option value="flexible">{t('operations.shiftTypes.flexible')}</option>
               </select>
             </label>
 
@@ -1030,6 +1063,47 @@ export default function OperationsCalendarGrid() {
                   <label className="inventory-field">
                     <span>{t('operations.leaveTime')}</span>
                     <input name="leave_time" type="time" value={cellForm.leave_time} onChange={updateCellField} />
+                  </label>
+
+                  <label className="inventory-field">
+                    <span>{t('operations.startTime')}</span>
+                    <input name="start_time" type="time" value={cellForm.start_time} onChange={updateCellField} />
+                  </label>
+
+                  <label className="inventory-field">
+                    <span>{t('operations.endTime')}</span>
+                    <input name="end_time" type="time" value={cellForm.end_time} onChange={updateCellField} />
+                  </label>
+
+                  <label className="inventory-field">
+                    <span>{t('operations.breakMinutes')}</span>
+                    <input
+                      min="0"
+                      name="break_minutes"
+                      type="number"
+                      value={cellForm.break_minutes}
+                      onChange={updateCellField}
+                    />
+                  </label>
+
+                  <label className="operations-checkbox-field">
+                    <input
+                      name="crosses_midnight"
+                      type="checkbox"
+                      checked={Boolean(cellForm.crosses_midnight)}
+                      onChange={updateCellField}
+                    />
+                    <span>{t('operations.crossesMidnight')}</span>
+                  </label>
+
+                  <label className="operations-checkbox-field">
+                    <input
+                      name="manual_time_override"
+                      type="checkbox"
+                      checked={Boolean(cellForm.manual_time_override)}
+                      onChange={updateCellField}
+                    />
+                    <span>{t('operations.manualTimeOverride')}</span>
                   </label>
 
                   <label className="inventory-field">

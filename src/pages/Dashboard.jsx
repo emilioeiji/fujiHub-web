@@ -60,6 +60,12 @@ export default function Dashboard() {
       to: '/operations/calendars',
     },
     {
+      title: t('dashboard.moduleCards.managementTitle'),
+      description: t('dashboard.moduleCards.managementDescription'),
+      status: t('dashboard.moduleCards.statusInitial'),
+      to: '/management',
+    },
+    {
       title: t('dashboard.moduleCards.housingTitle'),
       description: t('dashboard.moduleCards.housingDescription'),
       status: t('dashboard.moduleCards.statusPlanned'),
@@ -111,6 +117,7 @@ export default function Dashboard() {
           <Link className="erp-nav-link" to="/employees">{t('nav.employees')}</Link>
           <Link className="erp-nav-link" to="/inventory/items">{t('nav.inventory')}</Link>
           <Link className="erp-nav-link" to="/medical/requests">{t('nav.medical')}</Link>
+          <Link className="erp-nav-link" to="/management">{t('nav.management')}</Link>
           <span className="erp-nav-link disabled">{t('nav.operations')}</span>
         </nav>
       </aside>
