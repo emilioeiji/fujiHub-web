@@ -386,6 +386,7 @@
     "position": "配置",
     "attendanceStatus": "出勤ステータス",
     "workTime": "勤務時間",
+    "operationalCode": "運用コード",
     "overtimeMinutes": "残業分",
     "rawValue": "セル表示値",
     "saveCell": "セルを保存",

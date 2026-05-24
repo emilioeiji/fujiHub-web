@@ -93,6 +93,11 @@
   text-align: center;
 }
 
+.operations-calendar-table .day-col.sunday-head {
+  background: #fde9ee;
+  color: #8a2d4f;
+}
+
 .day-cell {
   padding: 0;
 }
@@ -112,6 +117,14 @@
 .day-cell-button:hover {
   outline: 2px solid #1f6f78;
   outline-offset: -2px;
+}
+
+.operations-calendar-table tbody tr.row-trainee td {
+  background-color: #ffe7dd;
+}
+
+.operations-calendar-table tbody tr.row-trainee .sticky-col {
+  background-color: #ffe7dd;
 }
 
 .operations-side-grid {

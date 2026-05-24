@@ -61,6 +61,7 @@ function emptyCellForm() {
     position: '',
     attendance_status: '',
     work_time_code: '',
+    operational_code: '',
     overtime_minutes: 0,
     memo: '',
     raw_value: '',
@@ -106,6 +107,9 @@ export default function OperationsCalendarGrid() {
   const [buildingFloors, setBuildingFloors] = useState([]);
   const [attendanceStatuses, setAttendanceStatuses] = useState([]);
   const [workTimeCodes, setWorkTimeCodes] = useState([]);
+  const [operationalCodes, setOperationalCodes] = useState([]);
+  const [rotationStyles, setRotationStyles] = useState([]);
+  const [visualCategories, setVisualCategories] = useState([]);
   const [assignmentForm, setAssignmentForm] = useState({
     employee: '',
     operational_category: 'normal',
@@ -160,6 +164,45 @@ export default function OperationsCalendarGrid() {
     ];
   }, [assignments.length, cells.length, summaryRows.length, t]);
 
+  const rotationStyleByGroup = useMemo(() => {
+    return rotationStyles.reduce((acc, style) => {
+      acc[style.group_code] = style;
+      return acc;
+    }, {});
+  }, [rotationStyles]);
+
+  const visualCategoryByCode = useMemo(() => {
+    return visualCategories.reduce((acc, item) => {
+      acc[item.code] = item;
+      return acc;
+    }, {});
+  }, [visualCategories]);
+
+  const getAssignmentVisualCode = (assignment) => {
+    if (assignment.employee_detail?.retired || assignment.employee_detail?.end_work) return 'retired';
+    const category = assignment.operational_category;
+    if (category === 'relief') return 'relief';
+    if (category === 'koutei_leader') return 'koutei_leader';
+    if (category === 'trainer') return 'trainer';
+    if ((assignment.notes || '').toLowerCase().includes('trainee')) return 'trainee';
+    return 'normal';
+  };
+
+  const assignmentsForGrid = useMemo(() => {
+    const rank = (assignment) => {
+      const visualCode = getAssignmentVisualCode(assignment);
+      if (['manager', 'director', 'supervisor', 'gl', 'koutei_leader'].includes(assignment.operational_category)) return 300;
+      if (visualCode === 'relief') return 280;
+      if (visualCode === 'trainee') return 140;
+      return 100;
+    };
+    return [...assignments].sort((a, b) => {
+      const rankDiff = rank(a) - rank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.display_order || 0) - (b.display_order || 0);
+    });
+  }, [assignments]);
+
   const loadData = async () => {
     setLoading(true);
     setIsError(false);
@@ -175,6 +218,9 @@ export default function OperationsCalendarGrid() {
       buildingFloorsRes,
       statusesRes,
       workCodesRes,
+      operationalCodesRes,
+      rotationStylesRes,
+      visualCategoriesRes,
     ] = await Promise.all([
       authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/`),
       authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignments/`),
@@ -185,6 +231,9 @@ export default function OperationsCalendarGrid() {
       authFetch(`${API_BASE_URL}/api/buildingfloors/`),
       authFetch(`${API_BASE_URL}/api/operations/attendance-statuses/`),
       authFetch(`${API_BASE_URL}/api/operations/work-time-codes/`),
+      authFetch(`${API_BASE_URL}/api/operations/operational-codes/`),
+      authFetch(`${API_BASE_URL}/api/operations/rotation-group-styles/`),
+      authFetch(`${API_BASE_URL}/api/operations/visual-categories/`),
     ]);
 
     if (calendarRes.ok) {
@@ -222,6 +271,9 @@ export default function OperationsCalendarGrid() {
     if (buildingFloorsRes.ok) setBuildingFloors(normalizeList(await buildingFloorsRes.json()));
     if (statusesRes.ok) setAttendanceStatuses(normalizeList(await statusesRes.json()));
     if (workCodesRes.ok) setWorkTimeCodes(normalizeList(await workCodesRes.json()));
+    if (operationalCodesRes.ok) setOperationalCodes(normalizeList(await operationalCodesRes.json()));
+    if (rotationStylesRes.ok) setRotationStyles(normalizeList(await rotationStylesRes.json()));
+    if (visualCategoriesRes.ok) setVisualCategories(normalizeList(await visualCategoriesRes.json()));
 
     if (
       !calendarRes.ok ||
@@ -232,7 +284,10 @@ export default function OperationsCalendarGrid() {
       !positionsRes.ok ||
       !buildingFloorsRes.ok ||
       !statusesRes.ok ||
-      !workCodesRes.ok
+      !workCodesRes.ok ||
+      !operationalCodesRes.ok ||
+      !rotationStylesRes.ok ||
+      !visualCategoriesRes.ok
     ) {
       setStatusMessage(t('operations.gridLoadError'));
       setIsError(true);
@@ -286,6 +341,7 @@ export default function OperationsCalendarGrid() {
           position: existing.position || '',
           attendance_status: existing.attendance_status || '',
           work_time_code: existing.work_time_code || '',
+          operational_code: existing.operational_code || '',
           overtime_minutes: existing.overtime_minutes || 0,
           memo: existing.memo || '',
           raw_value: existing.raw_value || '',
@@ -508,6 +564,7 @@ export default function OperationsCalendarGrid() {
       position: cellForm.position ? Number(cellForm.position) : null,
       attendance_status: cellForm.attendance_status ? Number(cellForm.attendance_status) : null,
       work_time_code: cellForm.work_time_code ? Number(cellForm.work_time_code) : null,
+      operational_code: cellForm.operational_code ? Number(cellForm.operational_code) : null,
       overtime_minutes: Number(cellForm.overtime_minutes || 0),
     };
 
@@ -541,6 +598,7 @@ export default function OperationsCalendarGrid() {
     if (!cell) return '';
     if (cell.raw_value) return cell.raw_value;
     const parts = [
+      cell.operational_code_detail?.label_jp,
       cell.position_detail?.code,
       cell.attendance_status_detail?.label_jp,
       cell.work_time_code_detail?.label_jp,
@@ -791,21 +849,59 @@ export default function OperationsCalendarGrid() {
                     <th className="sticky-col code">{t('operations.code')}</th>
                     <th className="sticky-col category">{t('operations.category')}</th>
                     {days.map((day) => (
-                      <th className="day-col" key={day.date}>{day.day}</th>
+                      <th className={`day-col ${new Date(day.date).getDay() === 0 ? 'sunday-head' : ''}`} key={day.date}>
+                        {day.day}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {assignments.map((assignment) => (
-                    <tr key={assignment.id}>
+                  {assignmentsForGrid.map((assignment) => {
+                    const groupStyle = rotationStyleByGroup[assignment.rotation_group];
+                    const visualCode = getAssignmentVisualCode(assignment);
+                    const visual = visualCategoryByCode[visualCode];
+                    const rowClass = visual?.target_column === 'row' || visualCode === 'trainee' ? 'row-trainee' : '';
+                    return (
+                    <tr key={assignment.id} className={rowClass}>
                       <td className="sticky-col scd">{assignment.display_order}</td>
-                      <td className="sticky-col name">{employeeLabel(assignment.employee_detail)}</td>
-                      <td className="sticky-col jp">{assignment.employee_detail?.name_jp || '-'}</td>
-                      <td className="sticky-col code">{employeeCode(assignment.employee_detail)}</td>
+                      <td
+                        className="sticky-col name"
+                        style={{
+                          backgroundColor: groupStyle?.background_color || undefined,
+                          color: groupStyle?.text_color || undefined,
+                        }}
+                      >
+                        {employeeLabel(assignment.employee_detail)}
+                      </td>
+                      <td
+                        className="sticky-col jp"
+                        style={{
+                          backgroundColor: visualCode === 'relief' ? visual?.background_color : undefined,
+                          color: visualCode === 'relief' ? visual?.text_color : undefined,
+                        }}
+                      >
+                        {assignment.employee_detail?.name_jp || '-'}
+                      </td>
+                      <td
+                        className="sticky-col code"
+                        style={{
+                          backgroundColor: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
+                            ? visual?.background_color
+                            : undefined,
+                          color: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
+                            ? visual?.text_color
+                            : undefined,
+                        }}
+                      >
+                        {employeeCode(assignment.employee_detail)}
+                      </td>
                       <td className="sticky-col category">{t(`operations.categories.${assignment.operational_category}`)}</td>
                       {days.map((day) => {
                         const cell = cellMap[`${assignment.id}-${day.date}`];
-                        const background = cell?.attendance_status_detail?.color || '';
+                        const background =
+                          cell?.operational_code_detail?.background_color ||
+                          cell?.attendance_status_detail?.color ||
+                          '';
                         return (
                           <td className="day-cell" key={day.date}>
                             <button
@@ -820,7 +916,8 @@ export default function OperationsCalendarGrid() {
                         );
                       })}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -868,6 +965,18 @@ export default function OperationsCalendarGrid() {
                     <select name="work_time_code" value={cellForm.work_time_code} onChange={updateCellField}>
                       <option value="">{t('common.none')}</option>
                       {workTimeCodes.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.label_jp} - {item.label_pt}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="inventory-field">
+                    <span>{t('operations.operationalCode')}</span>
+                    <select name="operational_code" value={cellForm.operational_code} onChange={updateCellField}>
+                      <option value="">{t('common.none')}</option>
+                      {operationalCodes.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.label_jp} - {item.label_pt}
                         </option>

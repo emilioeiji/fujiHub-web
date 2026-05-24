@@ -386,6 +386,7 @@
     "position": "Posição",
     "attendanceStatus": "Status de presença",
     "workTime": "Jornada",
+    "operationalCode": "Código operacional",
     "overtimeMinutes": "Minutos extras",
     "rawValue": "Valor da célula",
     "saveCell": "Salvar célula",
