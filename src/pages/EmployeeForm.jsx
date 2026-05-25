@@ -119,6 +119,11 @@ export default function EmployeeForm() {
   }, []);
 
   const onSubmit = async (data) => {
+    const fiveTwoOffDays = String(data.five_two_off_days_input || '')
+      .split(',')
+      .map((value) => Number(String(value).trim()))
+      .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6);
+
     const cleaned = {
       ...data,
       joined_imc: data.joined_imc || null,
@@ -128,7 +133,9 @@ export default function EmployeeForm() {
       joined_fa: data.joined_fa || null,
       birth_date: data.birth_date || null,
       dispatch_start: data.dispatch_start || null,
+      five_two_off_days: fiveTwoOffDays,
     };
+    delete cleaned.five_two_off_days_input;
 
     [
       'hourly_rate',
@@ -168,10 +175,12 @@ export default function EmployeeForm() {
             <TextField label={t('employees.employeeId')} register={register} name="employee_id" required />
             <TextField label={t('employees.employeeCode')} register={register} name="employee_cd" />
             <TextField label={t('employees.internalName')} register={register} name="internal_name" />
+            <TextField label={t('employees.nickname')} register={register} name="nickname" />
             <TextField label={t('employees.englishName')} register={register} name="name_en" />
             <TextField label={t('employees.japaneseName')} register={register} name="name_jp" />
             <TextField label={t('employees.kanaName')} register={register} name="name_kana" />
             <TextField label={t('employees.murataName')} register={register} name="name_cd" />
+            <TextField label={t('employees.organization')} register={register} name="organization_name" />
           </div>
         </fieldset>
 
@@ -244,10 +253,60 @@ export default function EmployeeForm() {
         </fieldset>
 
         <fieldset>
+          <legend>{t('employees.operationalDefaults')}</legend>
+          <div className="master-form-grid compact">
+            <label className="master-field">
+              <span>{t('employees.operationalCategory')}</span>
+              <select {...register('operational_category')}>
+                <option value="normal">normal</option>
+                <option value="relief">relief</option>
+                <option value="trainee">trainee</option>
+                <option value="trainer">trainer</option>
+                <option value="kl">kl</option>
+                <option value="gl">gl</option>
+                <option value="supervisor">supervisor</option>
+                <option value="manager">manager</option>
+                <option value="staff">staff</option>
+              </select>
+            </label>
+            <label className="master-field">
+              <span>{t('employees.workPattern')}</span>
+              <select {...register('work_pattern')}>
+                <option value="4x2">4x2</option>
+                <option value="5x2">5x2</option>
+                <option value="manual">manual</option>
+              </select>
+            </label>
+            <label className="master-field">
+              <span>{t('employees.shiftType')}</span>
+              <select {...register('shift_type')}>
+                <option value="day">day</option>
+                <option value="night">night</option>
+                <option value="flexible">flexible</option>
+              </select>
+            </label>
+            <label className="master-field">
+              <span>{t('employees.rotationGroup')}</span>
+              <select {...register('rotation_group')}>
+                <option value="">{t('common.none')}</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+              </select>
+            </label>
+            <TextField label={t('employees.fiveTwoOffDays')} register={register} name="five_two_off_days_input" />
+          </div>
+        </fieldset>
+
+        <fieldset>
           <legend>{t('employees.notesSection')}</legend>
           <label className="master-field full">
             <span>{t('employees.additionalComments')}</span>
             <textarea {...register('notes')} rows={4} />
+          </label>
+          <label className="master-field full">
+            <span>{t('employees.operationalMemo')}</span>
+            <textarea {...register('operational_memo')} rows={3} />
           </label>
         </fieldset>
 

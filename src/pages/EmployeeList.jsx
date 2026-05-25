@@ -1,9 +1,110 @@
 import { useEmployees } from '../hooks/useEmployees';
 import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react';
+import { authFetch } from '../utils/authFetch';
+import { apiUrl } from '../config/api';
 
 export default function EmployeeList() {
   const { t } = useTranslation();
-  const { employees, loading, deleteEmployee } = useEmployees();
+  const { employees, loading, pagination, deleteEmployee, updateEmployee, listEmployees } = useEmployees();
+  const [departments, setDepartments] = useState([]);
+  const [exporting, setExporting] = useState(false);
+  const [filters, setFilters] = useState({
+    search: '',
+    department: '',
+    active: 'true',
+    operational_category: '',
+    work_pattern: '',
+    page: 1,
+    page_size: 25,
+  });
+  const [editingId, setEditingId] = useState('');
+  const [editForm, setEditForm] = useState({
+    nickname: '',
+    operational_category: 'normal',
+    work_pattern: '4x2',
+    shift_type: 'day',
+    rotation_group: '',
+    active_end_month: true,
+  });
+
+  useEffect(() => {
+    (async () => {
+      const depRes = await authFetch(apiUrl('/api/departments/'));
+      if (!depRes.ok) return;
+      const data = await depRes.json();
+      setDepartments(Array.isArray(data) ? data : data?.results || []);
+    })();
+  }, []);
+
+  useEffect(() => {
+    listEmployees(filters);
+  }, [filters.search, filters.department, filters.active, filters.operational_category, filters.work_pattern, filters.page, filters.page_size]);
+
+  const startEdit = (employee) => {
+    setEditingId(employee.employee_id);
+    setEditForm({
+      nickname: employee.nickname || '',
+      operational_category: employee.operational_category || 'normal',
+      work_pattern: employee.work_pattern || '4x2',
+      shift_type: employee.shift_type || 'day',
+      rotation_group: employee.rotation_group || '',
+      active_end_month: Boolean(employee.active_end_month),
+    });
+  };
+
+  const saveEdit = async (employeeId) => {
+    const ok = await updateEmployee(employeeId, editForm);
+    if (ok) {
+      setEditingId('');
+      listEmployees(filters);
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      department: '',
+      active: 'true',
+      operational_category: '',
+      work_pattern: '',
+      page: 1,
+      page_size: 25,
+    });
+  };
+
+  const exportCsv = async () => {
+    setExporting(true);
+    const params = new URLSearchParams();
+    ["search", "department", "active", "operational_category", "work_pattern", "ordering"].forEach((key) => {
+      const value = filters[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        params.set(key, String(value));
+      }
+    });
+    const url = apiUrl(`/api/employees/export/${params.toString() ? `?${params.toString()}` : ''}`);
+    const res = await authFetch(url);
+    if (!res.ok) {
+      setExporting(false);
+      return;
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+    const filename = match?.[1] || `employees_${new Date().toISOString().replace(/[:T-]/g, '').slice(0, 13)}.csv`;
+    const objectUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(objectUrl);
+    setExporting(false);
+  };
+
+  const statusBadgeClass = (isActive) => (isActive ? 'master-badge active' : 'master-badge inactive');
+  const categoryBadgeClass = (category) => `master-badge category ${category || 'normal'}`;
 
   return (
     <section className="master-panel employee-list-panel">
@@ -14,6 +115,89 @@ export default function EmployeeList() {
         </div>
         <span className="master-count">{loading ? '...' : employees.length}</span>
       </div>
+
+      <div className="master-filter-grid">
+        <label className="master-field">
+          <span>{t('management.search')}</span>
+          <input
+            value={filters.search}
+            onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value, page: 1 }))}
+            placeholder={t('management.searchPlaceholder')}
+          />
+        </label>
+        <label className="master-field">
+          <span>{t('employees.department')}</span>
+          <select value={filters.department} onChange={(event) => setFilters((prev) => ({ ...prev, department: event.target.value, page: 1 }))}>
+            <option value="">{t('management.allDepartments')}</option>
+            {departments.map((dep) => (
+              <option key={dep.id} value={dep.id}>
+                {dep.code} - {dep.label_pt || dep.label_jp}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="master-field">
+          <span>{t('common.status')}</span>
+          <select value={filters.active} onChange={(event) => setFilters((prev) => ({ ...prev, active: event.target.value, page: 1 }))}>
+            <option value="">{t('common.total')}</option>
+            <option value="true">{t('common.active')}</option>
+            <option value="false">{t('employees.inactive')}</option>
+          </select>
+        </label>
+        <label className="master-field">
+          <span>{t('employees.operationalCategory')}</span>
+          <select value={filters.operational_category} onChange={(event) => setFilters((prev) => ({ ...prev, operational_category: event.target.value, page: 1 }))}>
+            <option value="">{t('common.total')}</option>
+            <option value="normal">normal</option>
+            <option value="relief">relief</option>
+            <option value="trainee">trainee</option>
+            <option value="trainer">trainer</option>
+            <option value="kl">kl</option>
+            <option value="gl">gl</option>
+            <option value="supervisor">supervisor</option>
+            <option value="manager">manager</option>
+            <option value="staff">staff</option>
+          </select>
+        </label>
+        <label className="master-field">
+          <span>{t('employees.workPattern')}</span>
+          <select value={filters.work_pattern} onChange={(event) => setFilters((prev) => ({ ...prev, work_pattern: event.target.value, page: 1 }))}>
+            <option value="">{t('common.total')}</option>
+            <option value="4x2">4x2</option>
+            <option value="5x2">5x2</option>
+            <option value="manual">manual</option>
+          </select>
+        </label>
+        <label className="master-field">
+          <span>{t('employees.pageSize')}</span>
+          <select
+            value={filters.page_size}
+            onChange={(event) => setFilters((prev) => ({ ...prev, page_size: Number(event.target.value), page: 1 }))}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="master-inline-actions" style={{ marginBottom: '12px' }}>
+        <button className="master-secondary-button" type="button" onClick={resetFilters}>
+          {t('employees.resetFilters')}
+        </button>
+        <button className="master-primary-button" type="button" disabled={exporting || loading} onClick={exportCsv}>
+          {exporting ? t('employees.exportingCsv') : t('employees.exportCsv')}
+        </button>
+      </div>
+
+      <p className="master-empty-state" style={{ marginBottom: '12px' }}>
+        {t('employees.showingRange', {
+          from: pagination.count === 0 ? 0 : (filters.page - 1) * filters.page_size + 1,
+          to: Math.min(filters.page * filters.page_size, pagination.count),
+          total: pagination.count,
+        })}
+      </p>
 
       {loading ? (
         <p className="master-empty-state">{t('employees.loadingEmployees')}</p>
@@ -26,7 +210,11 @@ export default function EmployeeList() {
               <tr>
                 <th>ID</th>
                 <th>{t('common.name')}</th>
+                <th>{t('employees.japaneseName')}</th>
                 <th>{t('employees.department')}</th>
+                <th>{t('employees.operationalCategory')}</th>
+                <th>{t('employees.workPattern')}</th>
+                <th>{t('common.status')}</th>
                 <th>{t('common.actions')}</th>
               </tr>
             </thead>
@@ -35,15 +223,93 @@ export default function EmployeeList() {
                 <tr key={emp.employee_id}>
                   <td>{emp.employee_id}</td>
                   <td>{emp.name_en || emp.internal_name || '-'}</td>
-                  <td>{emp.department || '-'}</td>
+                  <td>{emp.name_jp || '-'}</td>
+                  <td>{emp.department_detail?.label_pt || emp.department_detail?.label_jp || '-'}</td>
                   <td>
-                    <button
-                      className="master-danger-button"
-                      type="button"
-                      onClick={() => deleteEmployee(emp.employee_id)}
-                    >
-                      {t('employees.delete')}
-                    </button>
+                    <span className={categoryBadgeClass(emp.operational_category)}>{emp.operational_category || 'normal'}</span>
+                  </td>
+                  <td>{emp.work_pattern || '-'}</td>
+                  <td>
+                    <span className={statusBadgeClass(emp.active_end_month)}>{emp.active_end_month ? t('common.active') : t('employees.inactive')}</span>
+                  </td>
+                  <td>
+                    {editingId === emp.employee_id ? (
+                      <div className="master-inline-editor">
+                        <input
+                          value={editForm.nickname}
+                          placeholder={t('employees.nickname')}
+                          onChange={(event) => setEditForm((prev) => ({ ...prev, nickname: event.target.value }))}
+                        />
+                        <select
+                          value={editForm.operational_category}
+                          onChange={(event) => setEditForm((prev) => ({ ...prev, operational_category: event.target.value }))}
+                        >
+                          <option value="normal">normal</option>
+                          <option value="relief">relief</option>
+                          <option value="trainee">trainee</option>
+                          <option value="trainer">trainer</option>
+                          <option value="kl">kl</option>
+                          <option value="gl">gl</option>
+                          <option value="supervisor">supervisor</option>
+                          <option value="manager">manager</option>
+                          <option value="staff">staff</option>
+                        </select>
+                        <select
+                          value={editForm.work_pattern}
+                          onChange={(event) => setEditForm((prev) => ({ ...prev, work_pattern: event.target.value }))}
+                        >
+                          <option value="4x2">4x2</option>
+                          <option value="5x2">5x2</option>
+                          <option value="manual">manual</option>
+                        </select>
+                        <select
+                          value={editForm.shift_type}
+                          onChange={(event) => setEditForm((prev) => ({ ...prev, shift_type: event.target.value }))}
+                        >
+                          <option value="day">day</option>
+                          <option value="night">night</option>
+                          <option value="flexible">flexible</option>
+                        </select>
+                        <select
+                          value={editForm.rotation_group}
+                          onChange={(event) => setEditForm((prev) => ({ ...prev, rotation_group: event.target.value }))}
+                        >
+                          <option value="">{t('common.none')}</option>
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                        </select>
+                        <label className="master-check-field">
+                          <input
+                            type="checkbox"
+                            checked={editForm.active_end_month}
+                            onChange={(event) => setEditForm((prev) => ({ ...prev, active_end_month: event.target.checked }))}
+                          />
+                          <span>{t('common.active')}</span>
+                        </label>
+                        <button className="master-primary-button" type="button" onClick={() => saveEdit(emp.employee_id)}>
+                          {t('common.save')}
+                        </button>
+                        <button className="master-secondary-button" type="button" onClick={() => setEditingId('')}>
+                          {t('common.cancel')}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="master-inline-actions">
+                        <button className="master-secondary-button" type="button" onClick={() => startEdit(emp)}>
+                          {t('common.edit')}
+                        </button>
+                        {emp.active_end_month ? (
+                          <button
+                            className="master-danger-button"
+                            type="button"
+                            onClick={() => deleteEmployee(emp.employee_id)}
+                          >
+                            {t('employees.deactivate')}
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -51,6 +317,26 @@ export default function EmployeeList() {
           </table>
         </div>
       )}
+
+      <div className="master-inline-actions" style={{ marginTop: '12px' }}>
+        <button
+          className="master-secondary-button"
+          type="button"
+          disabled={!pagination.previous || loading}
+          onClick={() => setFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+        >
+          {t('employees.previousPage')}
+        </button>
+        <span className="master-required-note">{t('employees.pageLabel', { page: filters.page })}</span>
+        <button
+          className="master-secondary-button"
+          type="button"
+          disabled={!pagination.next || loading}
+          onClick={() => setFilters((prev) => ({ ...prev, page: prev.page + 1 }))}
+        >
+          {t('employees.nextPage')}
+        </button>
+      </div>
     </section>
   );
 }

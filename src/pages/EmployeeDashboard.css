@@ -258,6 +258,51 @@
   color: #24313a;
 }
 
+.master-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.master-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.master-badge.active {
+  background: #dff7eb;
+  color: #115b35;
+}
+
+.master-badge.inactive {
+  background: #f7e0e0;
+  color: #8f2424;
+}
+
+.master-badge.category {
+  background: #edf2ff;
+  color: #233f7c;
+}
+
+.master-inline-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.master-inline-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.master-inline-editor input,
+.master-inline-editor select {
+  min-width: 120px;
+}
+
 .master-danger-button {
   color: #8f2d2d;
   background: #f8e8e8;
