@@ -12,6 +12,25 @@ function normalizeList(data) {
   return [];
 }
 
+function parseResponseBody(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { detail: text };
+  }
+}
+
+function readErrorMessage(data, fallback) {
+  if (!data) return fallback;
+  if (typeof data.detail === 'string') return data.detail;
+  const first = Object.entries(data)[0];
+  if (!first) return fallback;
+  const [field, value] = first;
+  const msg = Array.isArray(value) ? value[0] : value;
+  return `${field}: ${msg}`;
+}
+
 function PositionSection({ departments, buildingFloors }) {
   const { t } = useTranslation();
   const [departmentFilter, setDepartmentFilter] = useState('');
@@ -43,11 +62,11 @@ function PositionSection({ departments, buildingFloors }) {
     setLoading(true);
     setIsError(false);
     const queryPart = departmentFilter ? `?department=${departmentFilter}` : '';
-    const res = await authFetch(`${apiUrl('/api/operations/positions/${queryPart}')}`);
+    const res = await authFetch(apiUrl(`/api/operations/positions/${queryPart}`));
     const text = await res.text();
-    const data = text ? JSON.parse(text) : [];
+    const data = parseResponseBody(text) || [];
     if (!res.ok) {
-      setStatus(t('management.loadError'));
+      setStatus(readErrorMessage(data, `${t('management.loadError')} (${res.status})`));
       setIsError(true);
       setLoading(false);
       return;
@@ -83,9 +102,9 @@ function PositionSection({ departments, buildingFloors }) {
       body: JSON.stringify(payload),
     });
     const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
+    const data = parseResponseBody(text);
     if (!res.ok) {
-      setStatus(data?.detail || t('management.createError'));
+      setStatus(readErrorMessage(data, t('management.createError')));
       setIsError(true);
       return;
     }
@@ -349,4 +368,3 @@ export default function ManagementOperations() {
     </ManagementLayout>
   );
 }
-
