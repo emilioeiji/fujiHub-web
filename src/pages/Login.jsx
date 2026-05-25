@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/fujihub-main.png';
 import LanguageSelector from '../components/LanguageSelector';
+import { apiUrl } from '../config/api';
 import './Login.css'; // importa o CSS
 
 export default function Login() {
@@ -12,7 +13,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    const res = await fetch('http://127.0.0.1:8000/api/token/', {
+    const res = await fetch(apiUrl('/api/token/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),

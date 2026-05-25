@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import LanguageSelector from '../components/LanguageSelector';
+import { apiUrl } from '../config/api';
 import { authFetch } from '../utils/authFetch';
 import './Dashboard.css';
 
@@ -79,7 +80,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const res = await authFetch('http://127.0.0.1:8000/api/profile/');
+      const res = await authFetch(apiUrl('/api/profile/'));
 
       if (res.ok) {
         setProfile(await res.json());

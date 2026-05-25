@@ -1,3 +1,5 @@
+import { apiUrl } from '../config/api';
+
 export async function authFetch(url, options = {}) {
   let access = localStorage.getItem('access');
   const refresh = localStorage.getItem('refresh');
@@ -16,7 +18,7 @@ export async function authFetch(url, options = {}) {
   let res = await doFetch(access);
 
   if (res.status === 401 && refresh) {
-    const refreshRes = await fetch('http://127.0.0.1:8000/api/token/refresh/', {
+    const refreshRes = await fetch(apiUrl('/api/token/refresh/'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
@@ -38,6 +40,7 @@ export async function authFetch(url, options = {}) {
 
 export async function authFetchJson(url, options = {}) {
   const res = await authFetch(url, options);
-  const data = await res.json();
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
   return { ok: res.ok, data };
 }

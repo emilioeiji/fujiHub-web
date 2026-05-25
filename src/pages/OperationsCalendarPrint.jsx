@@ -7,7 +7,7 @@ import { authFetch } from '../utils/authFetch';
 import './Inventory.css';
 import './Operations.css';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
@@ -156,15 +156,15 @@ export default function OperationsCalendarPrint() {
     setLoadError('');
 
     const [calendarRes, assignmentsRes, cellsRes, summaryRes, totalsRes, rotationRes, visualRes, processesRes, shiftsRes] = await Promise.all([
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignments/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/cells/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/summary/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignment-totals/`),
-      authFetch(`${API_BASE_URL}/api/operations/rotation-group-styles/`),
-      authFetch(`${API_BASE_URL}/api/operations/visual-categories/`),
-      authFetch(`${API_BASE_URL}/api/processes/`),
-      authFetch(`${API_BASE_URL}/api/shifts/`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/assignments/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/cells/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/summary/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/assignment-totals/')}`),
+      authFetch(`${apiUrl('/api/operations/rotation-group-styles/')}`),
+      authFetch(`${apiUrl('/api/operations/visual-categories/')}`),
+      authFetch(`${apiUrl('/api/processes/')}`),
+      authFetch(`${apiUrl('/api/shifts/')}`),
     ]);
 
     if (calendarRes.ok) setCalendar(await calendarRes.json());

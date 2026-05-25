@@ -4,7 +4,7 @@ import { getLocalizedLabel } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import InventoryLayout from './InventoryLayout';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 const emptyItem = {
   sku: '',
@@ -71,8 +71,8 @@ export default function InventoryItems() {
     setLoading(true);
     setIsError(false);
     const [itemsRes, categoriesRes] = await Promise.all([
-      authFetch(`${API_BASE_URL}/api/inventory/items/`),
-      authFetch(`${API_BASE_URL}/api/inventory/categories/`),
+      authFetch(`${apiUrl('/api/inventory/items/')}`),
+      authFetch(`${apiUrl('/api/inventory/categories/')}`),
     ]);
 
     if (!itemsRes.ok || !categoriesRes.ok) {
@@ -118,7 +118,7 @@ export default function InventoryItems() {
       unit_cost: Number(form.unit_cost || 0),
     };
 
-    const res = await authFetch(`${API_BASE_URL}/api/inventory/items/`, {
+    const res = await authFetch(`${apiUrl('/api/inventory/items/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

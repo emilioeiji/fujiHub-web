@@ -4,7 +4,7 @@ import ManagementResourceSection from '../components/ManagementResourceSection';
 import { authFetch } from '../utils/authFetch';
 import ManagementLayout from './ManagementLayout';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
@@ -43,7 +43,7 @@ function PositionSection({ departments, buildingFloors }) {
     setLoading(true);
     setIsError(false);
     const queryPart = departmentFilter ? `?department=${departmentFilter}` : '';
-    const res = await authFetch(`${API_BASE_URL}/api/operations/positions/${queryPart}`);
+    const res = await authFetch(`${apiUrl('/api/operations/positions/${queryPart}')}`);
     const text = await res.text();
     const data = text ? JSON.parse(text) : [];
     if (!res.ok) {
@@ -78,7 +78,7 @@ function PositionSection({ departments, buildingFloors }) {
       department: form.department ? Number(form.department) : null,
       building_floor: form.building_floor ? Number(form.building_floor) : null,
     };
-    const res = await authFetch(`${API_BASE_URL}/api/operations/positions/`, {
+    const res = await authFetch(`${apiUrl('/api/operations/positions/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -221,10 +221,10 @@ export default function ManagementOperations() {
   useEffect(() => {
     (async () => {
       const [depRes, floorRes, attendanceRes, workRes] = await Promise.all([
-        authFetch(`${API_BASE_URL}/api/departments/`),
-        authFetch(`${API_BASE_URL}/api/buildingfloors/`),
-        authFetch(`${API_BASE_URL}/api/operations/attendance-statuses/`),
-        authFetch(`${API_BASE_URL}/api/operations/work-time-codes/`),
+        authFetch(`${apiUrl('/api/departments/')}`),
+        authFetch(`${apiUrl('/api/buildingfloors/')}`),
+        authFetch(`${apiUrl('/api/operations/attendance-statuses/')}`),
+        authFetch(`${apiUrl('/api/operations/work-time-codes/')}`),
       ]);
       if (depRes.ok) setDepartments(normalizeList(await depRes.json()));
       if (floorRes.ok) setBuildingFloors(normalizeList(await floorRes.json()));

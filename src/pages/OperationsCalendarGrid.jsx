@@ -5,7 +5,7 @@ import { getLocalizedName } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import OperationsLayout from './OperationsLayout';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
@@ -241,19 +241,19 @@ export default function OperationsCalendarGrid() {
       rotationStylesRes,
       visualCategoriesRes,
     ] = await Promise.all([
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignments/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/cells/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/summary/`),
-      authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignment-totals/`),
-      authFetch(`${API_BASE_URL}/api/employees/`),
-      authFetch(`${API_BASE_URL}/api/operations/positions/`),
-      authFetch(`${API_BASE_URL}/api/buildingfloors/`),
-      authFetch(`${API_BASE_URL}/api/operations/attendance-statuses/`),
-      authFetch(`${API_BASE_URL}/api/operations/work-time-codes/`),
-      authFetch(`${API_BASE_URL}/api/operations/operational-codes/`),
-      authFetch(`${API_BASE_URL}/api/operations/rotation-group-styles/`),
-      authFetch(`${API_BASE_URL}/api/operations/visual-categories/`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/assignments/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/cells/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/summary/')}`),
+      authFetch(`${apiUrl('/api/operations/calendars/${id}/assignment-totals/')}`),
+      authFetch(`${apiUrl('/api/employees/')}`),
+      authFetch(`${apiUrl('/api/operations/positions/')}`),
+      authFetch(`${apiUrl('/api/buildingfloors/')}`),
+      authFetch(`${apiUrl('/api/operations/attendance-statuses/')}`),
+      authFetch(`${apiUrl('/api/operations/work-time-codes/')}`),
+      authFetch(`${apiUrl('/api/operations/operational-codes/')}`),
+      authFetch(`${apiUrl('/api/operations/rotation-group-styles/')}`),
+      authFetch(`${apiUrl('/api/operations/visual-categories/')}`),
     ]);
 
     if (calendarRes.ok) {
@@ -405,7 +405,7 @@ export default function OperationsCalendarGrid() {
       default_position: assignmentForm.default_position ? Number(assignmentForm.default_position) : null,
     };
 
-    const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/assignments/`, {
+    const res = await authFetch(`${apiUrl('/api/operations/calendars/${id}/assignments/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -436,7 +436,7 @@ export default function OperationsCalendarGrid() {
     setStatusMessage('');
     setGenerateResult(null);
 
-    const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/generate-schedule/`, {
+    const res = await authFetch(`${apiUrl('/api/operations/calendars/${id}/generate-schedule/')}`, {
       method: 'POST',
       body: JSON.stringify(generateForm),
     });
@@ -462,7 +462,7 @@ export default function OperationsCalendarGrid() {
     setStatusMessage('');
     setImportResult(null);
 
-    const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/import-employees/`, {
+    const res = await authFetch(`${apiUrl('/api/operations/calendars/${id}/import-employees/')}`, {
       method: 'POST',
       body: JSON.stringify({ import_all: true }),
     });
@@ -493,7 +493,7 @@ export default function OperationsCalendarGrid() {
       building_floor: positionForm.building_floor ? Number(positionForm.building_floor) : null,
     };
 
-    const res = await authFetch(`${API_BASE_URL}/api/operations/positions/`, {
+    const res = await authFetch(`${apiUrl('/api/operations/positions/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -529,8 +529,8 @@ export default function OperationsCalendarGrid() {
     };
 
     const url = existing?.requirement_id
-      ? `${API_BASE_URL}/api/operations/calendars/${id}/requirements/${existing.requirement_id}/`
-      : `${API_BASE_URL}/api/operations/calendars/${id}/requirements/`;
+      ? `${apiUrl('/api/operations/calendars/${id}/requirements/${existing.requirement_id}/')}`
+      : `${apiUrl('/api/operations/calendars/${id}/requirements/')}`;
     const method = existing?.requirement_id ? 'PATCH' : 'POST';
 
     const res = await authFetch(url, {
@@ -566,7 +566,7 @@ export default function OperationsCalendarGrid() {
     setStatusMessage('');
     setPasteResult(null);
 
-    const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/${id}/cells/paste/`, {
+    const res = await authFetch(`${apiUrl('/api/operations/calendars/${id}/cells/paste/')}`, {
       method: 'POST',
       body: JSON.stringify({
         start_assignment: selectedCell.assignment.id,
@@ -614,8 +614,8 @@ export default function OperationsCalendarGrid() {
 
     const existingId = selectedCell?.existing?.id;
     const url = existingId
-      ? `${API_BASE_URL}/api/operations/calendars/${id}/cells/${existingId}/`
-      : `${API_BASE_URL}/api/operations/calendars/${id}/cells/`;
+      ? `${apiUrl('/api/operations/calendars/${id}/cells/${existingId}/')}`
+      : `${apiUrl('/api/operations/calendars/${id}/cells/')}`;
     const method = existingId ? 'PATCH' : 'POST';
 
     const res = await authFetch(url, {

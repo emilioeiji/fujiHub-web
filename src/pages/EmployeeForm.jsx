@@ -6,7 +6,7 @@ import { getLocalizedLabel, getLocalizedName } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import './EmployeeForm.css';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 function TextField({ label, register, name, type = 'text', required = false }) {
   return (
@@ -74,7 +74,7 @@ export default function EmployeeForm() {
       };
 
       for (const [key, url] of Object.entries(endpoints)) {
-        const res = await authFetch(`${API_BASE_URL}${url}`);
+        const res = await authFetch(apiUrl(url));
         if (!res.ok) continue;
 
         const data = await res.json();

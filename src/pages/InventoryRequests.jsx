@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { authFetch } from '../utils/authFetch';
 import InventoryLayout from './InventoryLayout';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 function getEmptyRequest() {
   return {
@@ -94,9 +94,9 @@ export default function InventoryRequests() {
     setLoading(true);
     setIsError(false);
     const [requestsRes, itemsRes, employeesRes] = await Promise.all([
-      authFetch(`${API_BASE_URL}/api/inventory/requests/`),
-      authFetch(`${API_BASE_URL}/api/inventory/items/`),
-      authFetch(`${API_BASE_URL}/api/employees/`),
+      authFetch(`${apiUrl('/api/inventory/requests/')}`),
+      authFetch(`${apiUrl('/api/inventory/items/')}`),
+      authFetch(`${apiUrl('/api/employees/')}`),
     ]);
 
     if (requestsRes.ok) setRequests(normalizeList(await requestsRes.json()));
@@ -142,7 +142,7 @@ export default function InventoryRequests() {
       ],
     };
 
-    const res = await authFetch(`${API_BASE_URL}/api/inventory/requests/`, {
+    const res = await authFetch(`${apiUrl('/api/inventory/requests/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -166,7 +166,7 @@ export default function InventoryRequests() {
     setIsError(false);
     setActioning(`${requestId}-${action}`);
 
-    const res = await authFetch(`${API_BASE_URL}/api/inventory/requests/${requestId}/${action}/`, {
+    const res = await authFetch(`${apiUrl('/api/inventory/requests/${requestId}/${action}/')}`, {
       method: 'POST',
       body: JSON.stringify({ note: action }),
     });

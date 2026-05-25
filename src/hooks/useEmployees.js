@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { authFetchJson } from '../utils/authFetch';
+import { apiUrl } from '../config/api';
 
-const API_URL = 'http://127.0.0.1:8000/api/employees/';
+const API_URL = apiUrl('/api/employees/');
 
 export function useEmployees() {
   const [employees, setEmployees] = useState([]);

@@ -4,7 +4,7 @@ import { getLocalizedName } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import MedicalLayout from './MedicalLayout';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 function getEmptyRequest() {
   return {
@@ -103,11 +103,11 @@ export default function MedicalRequests() {
     setLoading(true);
     setIsError(false);
     const [requestsRes, employeesRes, reasonsRes, symptomsRes, destinationsRes] = await Promise.all([
-      authFetch(`${API_BASE_URL}/api/medical/requests/`),
-      authFetch(`${API_BASE_URL}/api/employees/`),
-      authFetch(`${API_BASE_URL}/api/medical/reasons/`),
-      authFetch(`${API_BASE_URL}/api/medical/symptoms/`),
-      authFetch(`${API_BASE_URL}/api/medical/destinations/`),
+      authFetch(`${apiUrl('/api/medical/requests/')}`),
+      authFetch(`${apiUrl('/api/employees/')}`),
+      authFetch(`${apiUrl('/api/medical/reasons/')}`),
+      authFetch(`${apiUrl('/api/medical/symptoms/')}`),
+      authFetch(`${apiUrl('/api/medical/destinations/')}`),
     ]);
 
     if (requestsRes.ok) setRequests(normalizeList(await requestsRes.json()));
@@ -169,7 +169,7 @@ export default function MedicalRequests() {
       notes: form.notes,
     };
 
-    const res = await authFetch(`${API_BASE_URL}/api/medical/requests/`, {
+    const res = await authFetch(`${apiUrl('/api/medical/requests/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -193,7 +193,7 @@ export default function MedicalRequests() {
     setIsError(false);
     setActioning(`${requestId}-${action}`);
 
-    const res = await authFetch(`${API_BASE_URL}/api/medical/requests/${requestId}/${action}/`, {
+    const res = await authFetch(`${apiUrl('/api/medical/requests/${requestId}/${action}/')}`, {
       method: 'POST',
       body: JSON.stringify({ note: action }),
     });

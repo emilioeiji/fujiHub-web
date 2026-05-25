@@ -5,7 +5,7 @@ import { getLocalizedLabel } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import OperationsLayout from './OperationsLayout';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 const emptyCalendar = {
   department: '',
@@ -73,10 +73,10 @@ export default function OperationsCalendars() {
     setIsError(false);
 
     const [calendarsRes, departmentsRes, processesRes, shiftsRes] = await Promise.all([
-      authFetch(`${API_BASE_URL}/api/operations/calendars/`),
-      authFetch(`${API_BASE_URL}/api/departments/`),
-      authFetch(`${API_BASE_URL}/api/processes/`),
-      authFetch(`${API_BASE_URL}/api/shifts/`),
+      authFetch(`${apiUrl('/api/operations/calendars/')}`),
+      authFetch(`${apiUrl('/api/departments/')}`),
+      authFetch(`${apiUrl('/api/processes/')}`),
+      authFetch(`${apiUrl('/api/shifts/')}`),
     ]);
 
     if (calendarsRes.ok) setCalendars(normalizeList(await calendarsRes.json()));
@@ -119,7 +119,7 @@ export default function OperationsCalendars() {
       title: form.title || `${form.year}-${String(form.month).padStart(2, '0')}`,
     };
 
-    const res = await authFetch(`${API_BASE_URL}/api/operations/calendars/`, {
+    const res = await authFetch(`${apiUrl('/api/operations/calendars/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

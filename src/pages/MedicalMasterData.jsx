@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { authFetch } from '../utils/authFetch';
 import MedicalLayout from './MedicalLayout';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 const emptyReason = { code: '', name_pt: '', name_jp: '' };
 const emptySymptom = { code: '', name_pt: '', name_jp: '' };
@@ -98,9 +98,9 @@ export default function MedicalMasterData() {
     setLoading(true);
     setIsError(false);
     const [reasonsRes, symptomsRes, destinationsRes] = await Promise.all([
-      authFetch(`${API_BASE_URL}/api/medical/reasons/`),
-      authFetch(`${API_BASE_URL}/api/medical/symptoms/`),
-      authFetch(`${API_BASE_URL}/api/medical/destinations/`),
+      authFetch(`${apiUrl('/api/medical/reasons/')}`),
+      authFetch(`${apiUrl('/api/medical/symptoms/')}`),
+      authFetch(`${apiUrl('/api/medical/destinations/')}`),
     ]);
 
     if (reasonsRes.ok) setReasons(normalizeList(await reasonsRes.json()));
@@ -132,7 +132,7 @@ export default function MedicalMasterData() {
     setIsError(false);
     setSubmitting(endpoint);
 
-    const res = await authFetch(`${API_BASE_URL}/api/medical/${endpoint}/`, {
+    const res = await authFetch(`${apiUrl('/api/medical/${endpoint}/')}`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });

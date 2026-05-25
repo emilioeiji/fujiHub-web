@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authFetch } from '../utils/authFetch';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { apiUrl } from '../config/api';
 
 function readErrorMessage(data, fallback) {
   if (!data) return fallback;
@@ -48,7 +48,7 @@ export default function ManagementResourceSection({
   const loadItems = async () => {
     setLoading(true);
     setIsError(false);
-    const res = await authFetch(`${API_BASE_URL}${endpoint}`);
+    const res = await authFetch(apiUrl(endpoint));
     const text = await res.text();
     const data = text ? JSON.parse(text) : [];
     if (!res.ok) {
@@ -78,7 +78,7 @@ export default function ManagementResourceSection({
     if (readOnly) return;
     setSaving(true);
     setIsError(false);
-    const res = await authFetch(`${API_BASE_URL}${endpoint}`, {
+    const res = await authFetch(apiUrl(endpoint), {
       method: 'POST',
       body: JSON.stringify(createForm),
     });
@@ -109,7 +109,7 @@ export default function ManagementResourceSection({
     if (readOnly) return;
     setSaving(true);
     setIsError(false);
-    const res = await authFetch(`${API_BASE_URL}${endpoint}${id}/`, {
+    const res = await authFetch(apiUrl(`${endpoint}${id}/`), {
       method: 'PATCH',
       body: JSON.stringify(editForm),
     });
