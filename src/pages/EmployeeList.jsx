@@ -9,6 +9,12 @@ export default function EmployeeList() {
   const { employees, loading, pagination, deleteEmployee, updateEmployee, listEmployees } = useEmployees();
   const [departments, setDepartments] = useState([]);
   const [exporting, setExporting] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importingPreview, setImportingPreview] = useState(false);
+  const [importingCommit, setImportingCommit] = useState(false);
+  const [updateEmpty, setUpdateEmpty] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState('');
   const [filters, setFilters] = useState({
     search: '',
     department: '',
@@ -103,6 +109,68 @@ export default function EmployeeList() {
     setExporting(false);
   };
 
+  const downloadImportTemplate = async () => {
+    const res = await authFetch(apiUrl('/api/employees/import-template/'));
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = 'employees_import_template.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(objectUrl);
+  };
+
+  const runImportPreview = async () => {
+    if (!importFile) return;
+    setImportingPreview(true);
+    setImportError('');
+    setImportResult(null);
+    const formData = new FormData();
+    formData.append('file', importFile);
+    formData.append('update_empty', String(updateEmpty));
+    const access = localStorage.getItem('access');
+    const res = await fetch(apiUrl('/api/employees/import-preview/'), {
+      method: 'POST',
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: formData,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setImportError(data.detail || 'Falha no preview do CSV.');
+      setImportingPreview(false);
+      return;
+    }
+    setImportResult(data);
+    setImportingPreview(false);
+  };
+
+  const runImportCommit = async () => {
+    if (!importFile || !importResult) return;
+    setImportingCommit(true);
+    setImportError('');
+    const formData = new FormData();
+    formData.append('file', importFile);
+    formData.append('update_empty', String(updateEmpty));
+    const access = localStorage.getItem('access');
+    const res = await fetch(apiUrl('/api/employees/import-commit/'), {
+      method: 'POST',
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: formData,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setImportError(data.detail || 'Falha ao confirmar importação.');
+      setImportingCommit(false);
+      return;
+    }
+    setImportResult(data);
+    setImportingCommit(false);
+    listEmployees(filters);
+  };
+
   const statusBadgeClass = (isActive) => (isActive ? 'master-badge active' : 'master-badge inactive');
   const categoryBadgeClass = (category) => `master-badge category ${category || 'normal'}`;
 
@@ -189,6 +257,71 @@ export default function EmployeeList() {
         <button className="master-primary-button" type="button" disabled={exporting || loading} onClick={exportCsv}>
           {exporting ? t('employees.exportingCsv') : t('employees.exportCsv')}
         </button>
+      </div>
+
+      <div className="master-panel" style={{ marginBottom: '12px' }}>
+        <div className="master-panel-header">
+          <div>
+            <p className="master-eyebrow">Importação</p>
+            <h3>Importar CSV de Funcionários (MT.csv)</h3>
+          </div>
+        </div>
+        <div className="master-filter-grid">
+          <label className="master-field">
+            <span>Arquivo CSV (UTF-8/UTF-8 BOM)</span>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(event) => setImportFile(event.target.files?.[0] || null)}
+            />
+          </label>
+          <label className="master-field">
+            <span>Atualizar com campos vazios</span>
+            <select value={String(updateEmpty)} onChange={(event) => setUpdateEmpty(event.target.value === 'true')}>
+              <option value="false">Não (padrão)</option>
+              <option value="true">Sim</option>
+            </select>
+          </label>
+        </div>
+        <div className="master-inline-actions" style={{ marginTop: '8px' }}>
+          <button className="master-secondary-button" type="button" onClick={downloadImportTemplate}>
+            Baixar modelo CSV
+          </button>
+          <button
+            className="master-secondary-button"
+            type="button"
+            disabled={!importFile || importingPreview}
+            onClick={runImportPreview}
+          >
+            {importingPreview ? 'Gerando preview...' : 'Preview'}
+          </button>
+          <button
+            className="master-primary-button"
+            type="button"
+            disabled={!importFile || !importResult || importingCommit || (importResult?.errors || []).length > 0}
+            onClick={runImportCommit}
+          >
+            {importingCommit ? 'Importando...' : 'Confirmar importação'}
+          </button>
+        </div>
+        {importError ? <p className="master-empty-state" style={{ color: '#b91c1c' }}>{importError}</p> : null}
+        {importResult ? (
+          <div style={{ marginTop: '10px' }}>
+            <p className="master-empty-state">
+              Linhas: {importResult.total_rows} | Novos: {importResult.creates} | Atualizações: {importResult.updates} | Sem mudança: {importResult.unchanged}
+            </p>
+            {(importResult.errors || []).length > 0 ? (
+              <p className="master-empty-state" style={{ color: '#b91c1c' }}>
+                Erros: {importResult.errors.length} (corrija antes de confirmar)
+              </p>
+            ) : null}
+            {(importResult.warnings || []).length > 0 ? (
+              <p className="master-empty-state" style={{ color: '#a16207' }}>
+                Warnings: {importResult.warnings.length}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <p className="master-empty-state" style={{ marginBottom: '12px' }}>
