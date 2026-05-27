@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import TemplatePanel from '../components/TemplatePanel';
 import { getLocalizedLabel } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import OperationsLayout from './OperationsLayout';
@@ -51,9 +52,20 @@ export default function OperationsCalendars() {
   const [departments, setDepartments] = useState([]);
   const [processes, setProcesses] = useState([]);
   const [shifts, setShifts] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [form, setForm] = useState(emptyCalendar);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [processingCalendarId, setProcessingCalendarId] = useState(null);
+  const [exportingCalendarId, setExportingCalendarId] = useState(null);
+  const [templateDialogMode, setTemplateDialogMode] = useState('');
+  const [templateDialogCalendar, setTemplateDialogCalendar] = useState(null);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [templateNeedsOverwrite, setTemplateNeedsOverwrite] = useState(false);
+  const [templateTargetCounts, setTemplateTargetCounts] = useState({ assignments: 0, cells: 0 });
+  const [generatedTargetCalendarId, setGeneratedTargetCalendarId] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
@@ -72,23 +84,33 @@ export default function OperationsCalendars() {
     setLoading(true);
     setIsError(false);
 
-    const [calendarsRes, departmentsRes, processesRes, shiftsRes] = await Promise.all([
+    const [calendarsRes, departmentsRes, processesRes, shiftsRes, templatesRes] = await Promise.all([
       authFetch(`${apiUrl('/api/operations/calendars/')}`),
       authFetch(`${apiUrl('/api/departments/')}`),
       authFetch(`${apiUrl('/api/processes/')}`),
       authFetch(`${apiUrl('/api/shifts/')}`),
+      authFetch(`${apiUrl('/api/operations/calendar-templates/')}`),
     ]);
 
     if (calendarsRes.ok) setCalendars(normalizeList(await calendarsRes.json()));
     if (departmentsRes.ok) setDepartments(normalizeList(await departmentsRes.json()));
     if (processesRes.ok) setProcesses(normalizeList(await processesRes.json()));
     if (shiftsRes.ok) setShifts(normalizeList(await shiftsRes.json()));
+    if (templatesRes.ok) {
+      setTemplates(normalizeList(await templatesRes.json()));
+    } else {
+      setTemplates([]);
+    }
 
     if (!calendarsRes.ok || !departmentsRes.ok || !processesRes.ok || !shiftsRes.ok) {
       setStatusMessage(t('operations.loadError'));
       setIsError(true);
     } else {
-      setStatusMessage('');
+      if (!templatesRes.ok) {
+        setStatusMessage('Calendários carregados. Templates indisponíveis neste ambiente.');
+      } else {
+        setStatusMessage('');
+      }
     }
 
     setLoading(false);
@@ -138,6 +160,255 @@ export default function OperationsCalendars() {
     setSubmitting(false);
   };
 
+  const duplicateFromPrevious = async (calendarId) => {
+    if (processingCalendarId || loading) return;
+    const firstConfirm = window.confirm(
+      'Duplicar mês anterior para este calendário? Funcionários e base operacional serão copiados de forma conservadora.'
+    );
+    if (!firstConfirm) return;
+
+    setProcessingCalendarId(calendarId);
+    setIsError(false);
+    setStatusMessage('');
+    setGeneratedTargetCalendarId(null);
+
+    let overwrite = false;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const res = await authFetch(`${apiUrl(`/api/operations/calendars/${calendarId}/duplicate-from-previous/`)}`, {
+        method: 'POST',
+        body: JSON.stringify({ copy_base_cells: true, overwrite }),
+      });
+      const data = await readJson(res);
+
+      if (res.ok) {
+        setStatusMessage(
+          `Duplicação concluída: ${data?.created_assignments || 0} linhas, ${data?.created_cells || 0} células (destino #${data?.target_calendar_id})`
+        );
+        await loadData();
+        setProcessingCalendarId(null);
+        return;
+      }
+
+      if (res.status === 409 && data?.requires_confirmation && !overwrite) {
+        const overwriteConfirm = window.confirm(
+          `Destino já possui dados (${data?.target_assignment_count || 0} linhas, ${
+            data?.target_cell_count || 0
+          } células). Deseja sobrescrever?`
+        );
+        if (!overwriteConfirm) {
+          setStatusMessage('Operação cancelada pelo usuário.');
+          setProcessingCalendarId(null);
+          return;
+        }
+        overwrite = true;
+        continue;
+      }
+
+      setStatusMessage(formatApiMessage(data, 'Falha ao duplicar mês anterior.'));
+      setIsError(true);
+      setProcessingCalendarId(null);
+      return;
+    }
+    setProcessingCalendarId(null);
+  };
+
+  const generateNextMonth = async (calendarId) => {
+    if (processingCalendarId || loading) return;
+    const firstConfirm = window.confirm(
+      'Gerar próximo mês com base no calendário atual? Isso pode criar novo calendário e copiar a estrutura.'
+    );
+    if (!firstConfirm) return;
+
+    setProcessingCalendarId(calendarId);
+    setIsError(false);
+    setStatusMessage('');
+    setGeneratedTargetCalendarId(null);
+
+    let overwriteExisting = false;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const res = await authFetch(`${apiUrl(`/api/operations/calendars/${calendarId}/generate-next-month/`)}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          copy_assignments: true,
+          copy_base_cells: false,
+          overwrite_existing: overwriteExisting,
+        }),
+      });
+      const data = await readJson(res);
+
+      if (res.ok) {
+        setGeneratedTargetCalendarId(data?.target_calendar_id || null);
+        setStatusMessage(
+          `Próximo mês ${data?.target_year}-${String(data?.target_month || '').padStart(2, '0')} pronto: ${
+            data?.created_assignments || 0
+          } linhas, ${data?.created_cells || 0} células (destino #${data?.target_calendar_id})`
+        );
+        await loadData();
+        setProcessingCalendarId(null);
+        return;
+      }
+
+      if (res.status === 409 && data?.requires_confirmation && !overwriteExisting) {
+        const overwriteConfirm = window.confirm(
+          `Próximo mês já possui dados (${data?.target_assignment_count || 0} linhas, ${
+            data?.target_cell_count || 0
+          } células). Deseja sobrescrever?`
+        );
+        if (!overwriteConfirm) {
+          setStatusMessage('Operação cancelada pelo usuário.');
+          setProcessingCalendarId(null);
+          return;
+        }
+        overwriteExisting = true;
+        continue;
+      }
+
+      setStatusMessage(formatApiMessage(data, 'Falha ao gerar próximo mês.'));
+      setIsError(true);
+      setProcessingCalendarId(null);
+      return;
+    }
+    setProcessingCalendarId(null);
+  };
+
+  const exportCalendarExcel = async (calendar) => {
+    if (loading || processingCalendarId || exportingCalendarId) return;
+    setExportingCalendarId(calendar.id);
+    setIsError(false);
+    setStatusMessage('');
+    setGeneratedTargetCalendarId(null);
+    try {
+      const res = await authFetch(`${apiUrl(`/api/operations/calendars/${calendar.id}/export-excel/`)}`);
+      if (!res.ok) {
+        const data = await readJson(res);
+        setStatusMessage(formatApiMessage(data, 'Falha ao exportar Excel.'));
+        setIsError(true);
+        setExportingCalendarId(null);
+        return;
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+      const fallbackName = `escala_${calendar.year}_${String(calendar.month).padStart(2, '0')}.xlsx`;
+      const filename = match?.[1] || fallbackName;
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+      setStatusMessage(`Excel exportado: calendário #${calendar.id}`);
+    } catch {
+      setStatusMessage('Falha ao exportar Excel.');
+      setIsError(true);
+    } finally {
+      setExportingCalendarId(null);
+    }
+  };
+
+  const openSaveTemplateDialog = (calendar) => {
+    if (loading || processingCalendarId || exportingCalendarId) return;
+    setTemplateDialogCalendar(calendar);
+    setTemplateDialogMode('save');
+    setTemplateNeedsOverwrite(false);
+    setTemplateTargetCounts({ assignments: 0, cells: 0 });
+    setTemplateName(`${calendar.year}-${String(calendar.month).padStart(2, '0')} ${calendar.title || 'Template'}`);
+    setTemplateDescription('');
+  };
+
+  const openApplyTemplateDialog = (calendar) => {
+    if (loading || processingCalendarId || exportingCalendarId) return;
+    setTemplateDialogCalendar(calendar);
+    setTemplateDialogMode('apply');
+    setTemplateNeedsOverwrite(false);
+    setTemplateTargetCounts({ assignments: 0, cells: 0 });
+    setSelectedTemplateId(templates[0]?.id ? String(templates[0].id) : '');
+  };
+
+  const closeTemplateDialog = () => {
+    setTemplateDialogMode('');
+    setTemplateDialogCalendar(null);
+    setTemplateNeedsOverwrite(false);
+    setTemplateTargetCounts({ assignments: 0, cells: 0 });
+  };
+
+  const saveCalendarTemplate = async () => {
+    const calendar = templateDialogCalendar;
+    if (!calendar || !templateName.trim()) return;
+    setProcessingCalendarId(calendar.id);
+    setIsError(false);
+    setStatusMessage('');
+    try {
+      const res = await authFetch(`${apiUrl(`/api/operations/calendars/${calendar.id}/save-template/`)}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: templateName.trim(),
+          description: templateDescription.trim(),
+          scope_from_calendar: true,
+          include_base_cells: true,
+        }),
+      });
+      const data = await readJson(res);
+      if (!res.ok) {
+        setStatusMessage(formatApiMessage(data, 'Falha ao salvar template.'));
+        setIsError(true);
+        setProcessingCalendarId(null);
+        return;
+      }
+      setStatusMessage(
+        `Template salvo: ${data?.template_name || templateName.trim()} (${data?.created_assignments || 0} linhas, ${data?.created_cells || 0} células)`
+      );
+      closeTemplateDialog();
+      await loadData();
+    } finally {
+      setProcessingCalendarId(null);
+    }
+  };
+
+  const applyTemplateToCalendar = async () => {
+    const calendar = templateDialogCalendar;
+    if (!calendar) return;
+    if (!templates.length) {
+      setStatusMessage('Nenhum template disponível.');
+      setIsError(true);
+      return;
+    }
+    const templateId = Number(selectedTemplateId);
+    if (!templateId) return;
+
+    setProcessingCalendarId(calendar.id);
+    setIsError(false);
+    setStatusMessage('');
+    const res = await authFetch(`${apiUrl(`/api/operations/calendars/${calendar.id}/apply-template/`)}`, {
+      method: 'POST',
+      body: JSON.stringify({ template_id: templateId, overwrite: templateNeedsOverwrite }),
+    });
+    const data = await readJson(res);
+    if (res.ok) {
+      setStatusMessage(`Template aplicado: ${data?.created_assignments || 0} linhas, ${data?.created_cells || 0} células`);
+      closeTemplateDialog();
+      await loadData();
+      setProcessingCalendarId(null);
+      return;
+    }
+    if (res.status === 409 && data?.requires_confirmation && !templateNeedsOverwrite) {
+      setTemplateNeedsOverwrite(true);
+      setTemplateTargetCounts({
+        assignments: data?.target_assignment_count || 0,
+        cells: data?.target_cell_count || 0,
+      });
+      setStatusMessage('Destino possui dados. Confirme sobrescrita para aplicar o template.');
+      setIsError(false);
+      setProcessingCalendarId(null);
+      return;
+    }
+    setStatusMessage(formatApiMessage(data, 'Falha ao aplicar template.'));
+    setIsError(true);
+    setProcessingCalendarId(null);
+  };
+
   return (
     <OperationsLayout
       title={t('operations.calendarsTitle')}
@@ -153,6 +424,33 @@ export default function OperationsCalendars() {
             </div>
             {statusMessage ? (
               <span className={`inventory-status ${isError ? 'error' : ''}`}>{statusMessage}</span>
+            ) : null}
+            {generatedTargetCalendarId ? (
+              <Link className="inventory-small-button" to={`/operations/calendars/${generatedTargetCalendarId}/grid`}>
+                Abrir calendário gerado
+              </Link>
+            ) : null}
+            {templateDialogMode && templateDialogCalendar ? (
+              <TemplatePanel
+                mode={templateDialogMode}
+                templates={templates}
+                selectedTemplateId={selectedTemplateId}
+                onSelectedTemplateIdChange={setSelectedTemplateId}
+                templateName={templateName}
+                onTemplateNameChange={setTemplateName}
+                templateDescription={templateDescription}
+                onTemplateDescriptionChange={setTemplateDescription}
+                scopeText={`${templateDialogCalendar.department_detail?.code || '-'} / ${
+                  processes.find((item) => Number(item.id) === Number(templateDialogCalendar.process))?.code || '-'
+                } / ${shifts.find((item) => Number(item.id) === Number(templateDialogCalendar.shift))?.code || '-'}`}
+                templateNeedsOverwrite={templateNeedsOverwrite}
+                templateTargetCounts={templateTargetCounts}
+                processing={processingCalendarId === templateDialogCalendar.id}
+                onSave={saveCalendarTemplate}
+                onApply={applyTemplateToCalendar}
+                onCancel={closeTemplateDialog}
+                style={{ marginTop: '10px' }}
+              />
             ) : null}
           </div>
 
@@ -269,9 +567,54 @@ export default function OperationsCalendars() {
                         <Link className="inventory-small-button" to={`/operations/calendars/${calendar.id}/grid`}>
                           {t('operations.openGrid')}
                         </Link>
-                        <Link className="inventory-small-button" to={`/operations/calendars/${calendar.id}/print`}>
-                          {t('operations.print')}
+                        <Link
+                          className="inventory-small-button"
+                          to={`/operations/calendars/${calendar.id}/print`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Imprimir / PDF
                         </Link>
+                        <button
+                          className="inventory-small-button"
+                          type="button"
+                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          onClick={() => duplicateFromPrevious(calendar.id)}
+                        >
+                          Duplicar mês anterior
+                        </button>
+                        <button
+                          className="inventory-small-button"
+                          type="button"
+                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          onClick={() => generateNextMonth(calendar.id)}
+                        >
+                          Gerar próximo mês
+                        </button>
+                        <button
+                          className="inventory-small-button"
+                          type="button"
+                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          onClick={() => exportCalendarExcel(calendar)}
+                        >
+                          {exportingCalendarId === calendar.id ? 'Exportando...' : 'Exportar Excel'}
+                        </button>
+                        <button
+                          className="inventory-small-button"
+                          type="button"
+                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          onClick={() => openSaveTemplateDialog(calendar)}
+                        >
+                          Salvar template
+                        </button>
+                        <button
+                          className="inventory-small-button"
+                          type="button"
+                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          onClick={() => openApplyTemplateDialog(calendar)}
+                        >
+                          Aplicar template
+                        </button>
                       </td>
                     </tr>
                   ))}

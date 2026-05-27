@@ -43,16 +43,57 @@ function formatMinutes(minutes = 0) {
 
 function renderCellText(cell, i18n) {
   if (!cell) return '';
-  if (cell.raw_value) return cell.raw_value;
 
-  return [
-    cell.position_detail?.code,
-    getLocalizedLabel(cell.attendance_status_detail, i18n, ''),
-    getLocalizedLabel(cell.work_time_code_detail, i18n, ''),
-    cell.memo,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const normalizeCellText = (value) =>
+    String(value ?? '')
+      .replace(/\r?\n/g, ' ')
+      .replace(/\t/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  const shortenCellText = (value, maxLen = 40) => {
+    const text = normalizeCellText(value);
+    if (!text) return '';
+    return text.length > maxLen ? text.slice(0, maxLen).trim() : text;
+  };
+
+  const statusShort =
+    shortenCellText(cell.attendance_status_detail?.code, 20) ||
+    shortenCellText(cell.attendance_status_detail?.label_jp, 20) ||
+    shortenCellText(cell.attendance_status_detail?.label_pt, 20);
+  const isAbsenceLike =
+    cell.attendance_status_detail?.is_absence ||
+    cell.attendance_status_detail?.is_working_day === false ||
+    ['休', '欠', '有休'].includes(statusShort);
+  if (isAbsenceLike && statusShort) return statusShort;
+
+  const positionToken = shortenCellText(cell.position_detail?.code || cell.position_detail?.name_jp || cell.position_detail?.name_pt, 20);
+  const floorToken = shortenCellText(
+    cell.position_detail?.building_floor_code ||
+      cell.position_detail?.location ||
+      cell.position_detail?.building_floor_detail?.code ||
+      '',
+    20
+  );
+  if (positionToken && floorToken && !positionToken.includes(floorToken)) return `${positionToken} / ${floorToken}`;
+  if (positionToken) return positionToken;
+
+  return (
+    shortenCellText(cell.operational_code_detail?.code, 24) ||
+    shortenCellText(cell.work_time_code_detail?.code, 24) ||
+    shortenCellText(cell.raw_value, 40) ||
+    ''
+  );
+}
+
+function getCellSemanticClass(cell) {
+  if (!cell) return 'print-cell-empty';
+  const status = cell.attendance_status_detail;
+  const opCategory = cell.operational_code_detail?.category;
+  if (status?.is_absence) return 'print-cell-absence';
+  if (status?.is_working_day === false) return 'print-cell-rest';
+  if (['special', 'special_shift', 'exception'].includes(opCategory)) return 'print-cell-special';
+  if (opCategory === 'alert') return 'print-cell-alert';
+  return 'print-cell-work';
 }
 
 export default function OperationsCalendarPrint() {
@@ -67,8 +108,8 @@ export default function OperationsCalendarPrint() {
   const [visualCategories, setVisualCategories] = useState([]);
   const [processes, setProcesses] = useState([]);
   const [shifts, setShifts] = useState([]);
-  const [paperSize, setPaperSize] = useState('A4');
-  const [orientation, setOrientation] = useState('landscape');
+  const [paperSize, setPaperSize] = useState('A3');
+  const [includeSummary, setIncludeSummary] = useState(true);
   const [scale, setScale] = useState('90');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -131,17 +172,24 @@ export default function OperationsCalendarPrint() {
       return 100;
     };
 
-    return assignments
+    const sortedAssignments = [...assignments].sort((a, b) => {
+      const rankDiff = rank(a) - rank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return (a.display_order || 0) - (b.display_order || 0);
+    });
+
+    const filtered = sortedAssignments
       .filter((assignment) => {
         const visualCode = getAssignmentVisualCode(assignment);
         const visual = visualCategoryByCode[visualCode];
-        return visual?.print_behavior !== 'suppress_on_print';
-      })
-      .sort((a, b) => {
-        const rankDiff = rank(a) - rank(b);
-        if (rankDiff !== 0) return rankDiff;
-        return (a.display_order || 0) - (b.display_order || 0);
+        return !(visual && visual.print_behavior === 'suppress_on_print');
       });
+
+    // Fallback operacional: nunca deixar a impressão sem linhas por filtro de categoria.
+    if (sortedAssignments.length > 0 && filtered.length === 0) {
+      return sortedAssignments;
+    }
+    return filtered;
   }, [assignments, visualCategoryByCode]);
 
   const process = processes.find((item) => Number(item.id) === Number(calendar?.process));
@@ -190,10 +238,10 @@ export default function OperationsCalendarPrint() {
 
   return (
     <main
-      className={`operations-print-page print-${paperSize.toLowerCase()} print-${orientation}`}
+      className={`operations-print-page print-${paperSize.toLowerCase()} print-landscape`}
       style={{ '--print-scale': Number(scale) / 100 }}
     >
-      <style>{`@page { size: ${paperSize} ${orientation}; margin: 8mm; }`}</style>
+      <style>{`@page { size: ${paperSize} landscape; margin: 8mm; }`}</style>
       <section className="operations-print-controls no-print">
         <div>
           <p className="inventory-eyebrow">{t('operations.printView')}</p>
@@ -204,16 +252,8 @@ export default function OperationsCalendarPrint() {
           <label className="inventory-field">
             <span>{t('operations.paperSize')}</span>
             <select value={paperSize} onChange={(event) => setPaperSize(event.target.value)}>
-              <option value="A4">A4</option>
-              <option value="A3">A3</option>
-            </select>
-          </label>
-
-          <label className="inventory-field">
-            <span>{t('operations.orientation')}</span>
-            <select value={orientation} onChange={(event) => setOrientation(event.target.value)}>
-              <option value="portrait">{t('operations.portrait')}</option>
-              <option value="landscape">{t('operations.landscape')}</option>
+              <option value="A3">A3 paisagem</option>
+              <option value="A4">A4 paisagem</option>
             </select>
           </label>
 
@@ -224,6 +264,18 @@ export default function OperationsCalendarPrint() {
               <option value="90">90%</option>
               <option value="100">100%</option>
             </select>
+          </label>
+
+          <label className="inventory-field">
+            <span>Resumo</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', minHeight: '38px' }}>
+              <input
+                type="checkbox"
+                checked={includeSummary}
+                onChange={(event) => setIncludeSummary(event.target.checked)}
+              />
+              <span>Incluir resumo</span>
+            </div>
           </label>
 
           <div className="operations-print-actions">
@@ -282,92 +334,96 @@ export default function OperationsCalendarPrint() {
             </header>
 
             <div className="operations-print-table-wrap">
-              <table className="operations-print-table">
-                <thead>
-                  <tr>
-                    <th>SCD</th>
-                    <th>所定</th>
-                    <th>残業</th>
-                    <th>過重</th>
-                    <th>人数</th>
-                    <th>{t('operations.name')}</th>
-                    <th>和名</th>
-                    <th>{t('operations.code')}</th>
-                    <th>{t('operations.category')}</th>
-                    {days.map((day) => (
-                      <th key={day.date} className={new Date(day.date).getDay() === 0 ? 'sunday-head' : ''}>
-                        {day.day}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {printableAssignments.map((assignment) => {
-                    const totals = assignmentTotalsMap[assignment.id];
-                    const groupStyle = rotationStyleByGroup[assignment.rotation_group];
-                    const visualCode = getAssignmentVisualCode(assignment);
-                    const visual = visualCategoryByCode[visualCode];
-                    const rowClass = visual?.target_column === 'row' || visualCode === 'trainee' ? 'row-trainee' : '';
-
-                    return (
-                    <tr key={assignment.id} className={rowClass}>
-                      <td>{assignment.display_order}</td>
-                      <td>{totals?.scheduled_regular_formatted || formatMinutes(totals?.scheduled_regular_minutes_total)}</td>
-                      <td>{totals?.actual_overtime_formatted || formatMinutes(totals?.actual_overtime_minutes_total)}</td>
-                      <td>{totals?.overload_formatted || formatMinutes(totals?.overload_minutes)}</td>
-                      <td>1</td>
-                      <td
-                        style={{
-                          backgroundColor: groupStyle?.background_color || undefined,
-                          color: groupStyle?.text_color || undefined,
-                        }}
-                      >
-                        {employeeLabel(assignment.employee_detail)}
-                      </td>
-                      <td
-                        style={{
-                          backgroundColor: visualCode === 'relief' ? visual?.background_color : undefined,
-                          color: visualCode === 'relief' ? visual?.text_color : undefined,
-                        }}
-                      >
-                        {assignment.employee_detail?.name_jp || '-'}
-                      </td>
-                      <td
-                        style={{
-                          backgroundColor: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
-                            ? visual?.background_color
-                            : undefined,
-                          color: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
-                            ? visual?.text_color
-                            : undefined,
-                        }}
-                      >
-                        {employeeCode(assignment.employee_detail)}
-                      </td>
-                      <td>{t(`operations.categories.${assignment.operational_category}`)}</td>
-                      {days.map((day) => {
-                        const cell = cellMap[`${assignment.id}-${day.date}`];
-                        const cellColor =
-                          cell?.operational_code_detail?.background_color ||
-                          cell?.attendance_status_detail?.color ||
-                          undefined;
-                        return (
-                          <td
-                            key={day.date}
-                            style={{ backgroundColor: cellColor }}
-                          >
-                            {renderCellText(cell, i18n) || ''}
-                          </td>
-                        );
-                      })}
+              {printableAssignments.length === 0 ? (
+                <p className="inventory-empty-state">Nenhum funcionário/linha disponível para impressão neste calendário.</p>
+              ) : (
+                <table className="operations-print-table">
+                  <thead>
+                    <tr>
+                      <th>SCD</th>
+                      <th>所定</th>
+                      <th>残業</th>
+                      <th>過重</th>
+                      <th>人数</th>
+                      <th>{t('operations.name')}</th>
+                      <th>和名</th>
+                      <th>{t('operations.code')}</th>
+                      <th>{t('operations.category')}</th>
+                      {days.map((day) => (
+                        <th key={day.date} className={new Date(day.date).getDay() === 0 ? 'sunday-head' : ''}>
+                          <span className="print-day-number">{day.day}</span>
+                          <span className="print-day-weekday">
+                            {new Date(`${day.date}T00:00:00`).toLocaleDateString(i18n.language || 'pt-BR', { weekday: 'short' })}
+                          </span>
+                        </th>
+                      ))}
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {printableAssignments.map((assignment) => {
+                      const totals = assignmentTotalsMap[assignment.id];
+                      const groupStyle = rotationStyleByGroup[assignment.rotation_group];
+                      const visualCode = getAssignmentVisualCode(assignment);
+                      const visual = visualCategoryByCode[visualCode];
+                      const rowClass = visual?.target_column === 'row' || visualCode === 'trainee' ? 'row-trainee' : '';
+
+                      return (
+                      <tr key={assignment.id} className={rowClass}>
+                        <td>{assignment.display_order}</td>
+                        <td>{totals?.scheduled_regular_formatted || formatMinutes(totals?.scheduled_regular_minutes_total)}</td>
+                        <td>{totals?.actual_overtime_formatted || formatMinutes(totals?.actual_overtime_minutes_total)}</td>
+                        <td>{totals?.overload_formatted || formatMinutes(totals?.overload_minutes)}</td>
+                        <td>1</td>
+                        <td
+                          style={{
+                            backgroundColor: groupStyle?.background_color || undefined,
+                            color: groupStyle?.text_color || undefined,
+                          }}
+                        >
+                          {employeeLabel(assignment.employee_detail)}
+                        </td>
+                        <td
+                          style={{
+                            backgroundColor: visualCode === 'relief' ? visual?.background_color : undefined,
+                            color: visualCode === 'relief' ? visual?.text_color : undefined,
+                          }}
+                        >
+                          {assignment.employee_detail?.name_jp || '-'}
+                        </td>
+                        <td
+                          style={{
+                            backgroundColor: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
+                              ? visual?.background_color
+                              : undefined,
+                            color: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
+                              ? visual?.text_color
+                              : undefined,
+                          }}
+                        >
+                          {employeeCode(assignment.employee_detail)}
+                        </td>
+                        <td>{t(`operations.categories.${assignment.operational_category}`)}</td>
+                        {days.map((day) => {
+                          const cell = cellMap[`${assignment.id}-${day.date}`];
+                          return (
+                            <td
+                              key={day.date}
+                              className={getCellSemanticClass(cell)}
+                            >
+                              {renderCellText(cell, i18n) || ''}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
 
-            <section className="operations-print-summary">
+            {includeSummary ? (
+            <section className="operations-print-summary operations-print-summary-separate-page">
               <h2>{t('operations.requiredVsAssigned')}</h2>
               {summaryRows.length === 0 ? (
                 <p>{t('operations.emptySummary')}</p>
@@ -396,6 +452,7 @@ export default function OperationsCalendarPrint() {
                 </table>
               )}
             </section>
+            ) : null}
           </>
         )}
       </section>
