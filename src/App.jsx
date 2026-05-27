@@ -15,6 +15,7 @@ import ManagementUsers from './pages/ManagementUsers';
 import OperationsCalendarGrid from './pages/OperationsCalendarGrid';
 import OperationsCalendarPrint from './pages/OperationsCalendarPrint';
 import OperationsCalendars from './pages/OperationsCalendars';
+import OperationsHikitsugui from './pages/OperationsHikitsugui';
 
 function ProtectedRoute({ children }) {
   const hasToken = Boolean(localStorage.getItem('access'));
@@ -140,6 +141,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <OperationsCalendarPrint />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/hikitsugui"
+        element={
+          <ProtectedRoute>
+            <OperationsHikitsugui />
           </ProtectedRoute>
         }
       />

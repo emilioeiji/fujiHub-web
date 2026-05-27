@@ -51,10 +51,16 @@ export default function OperationsLayout({ children, title, subtitle, summary })
 
         <nav className="inventory-tabs" aria-label={t('operations.module')}>
           <Link
-            className={location.pathname === '/operations/calendars' ? 'active' : ''}
+            className={location.pathname.startsWith('/operations/calendars') ? 'active' : ''}
             to="/operations/calendars"
           >
             {t('operations.calendars')}
+          </Link>
+          <Link
+            className={location.pathname.startsWith('/operations/hikitsugui') ? 'active' : ''}
+            to="/operations/hikitsugui"
+          >
+            Hikitsugui
           </Link>
         </nav>
 

@@ -278,6 +278,167 @@
   color: #3b2f78;
 }
 
+.hikitsugui-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  border: 1px solid transparent;
+}
+
+.hikitsugui-group-row {
+  background: #eef4f7;
+  color: #294454;
+  font-weight: 700;
+}
+
+.hikitsugui-badge.status-open {
+  background: #ecf5ff;
+  color: #1f4f7f;
+  border-color: #c9e3ff;
+}
+
+.hikitsugui-badge.status-in_progress {
+  background: #edf8ff;
+  color: #1d5f88;
+  border-color: #c9e8fa;
+}
+
+.hikitsugui-badge.status-pending {
+  background: #fff8e6;
+  color: #805b12;
+  border-color: #ffe19e;
+}
+
+.hikitsugui-badge.status-resolved {
+  background: #ebf9ef;
+  color: #1f6a3f;
+  border-color: #bde9cb;
+}
+
+.hikitsugui-badge.priority-low {
+  background: #f4f6f8;
+  color: #5a6a75;
+  border-color: #d6dee4;
+}
+
+.hikitsugui-badge.priority-normal {
+  background: #eef4ff;
+  color: #2f5388;
+  border-color: #d6e3ff;
+}
+
+.hikitsugui-badge.priority-high {
+  background: #fff2e9;
+  color: #9a4a12;
+  border-color: #ffd2b4;
+}
+
+.hikitsugui-badge.priority-critical {
+  background: #ffecec;
+  color: #9d1f1f;
+  border-color: #ffc7c7;
+}
+
+.hikitsugui-badge.category-danger {
+  background: #ffeef0;
+  color: #8f2438;
+  border-color: #ffc8d0;
+}
+
+.hikitsugui-badge.category-warning {
+  background: #fff5e9;
+  color: #87531f;
+  border-color: #ffddb2;
+}
+
+.hikitsugui-badge.category-info {
+  background: #edf5ff;
+  color: #215283;
+  border-color: #cfe2ff;
+}
+
+.hikitsugui-badge.category-success {
+  background: #ecf9f0;
+  color: #1f6d43;
+  border-color: #c6ebd4;
+}
+
+.hikitsugui-badge.category-purple {
+  background: #f3efff;
+  color: #5a3d95;
+  border-color: #dfd4ff;
+}
+
+.hikitsugui-badge.category-neutral {
+  background: #f3f4f6;
+  color: #4b5563;
+  border-color: #d9dde3;
+}
+
+.hikitsugui-print-only {
+  display: none;
+}
+
+.hikitsugui-print-card {
+  border: 1px solid #cfd8df;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.hikitsugui-print-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.hikitsugui-print-item {
+  border-top: 1px dashed #d5dde3;
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+@media print {
+  .hikitsugui-no-print,
+  .inventory-sidebar,
+  .inventory-actions,
+  .inventory-tabs {
+    display: none !important;
+  }
+
+  .inventory-main,
+  .inventory-shell,
+  .inventory-panel {
+    background: #fff !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+  }
+
+  .hikitsugui-print-only {
+    display: block !important;
+    font-size: 11px;
+    color: #111827;
+  }
+
+  .hikitsugui-print-only h2,
+  .hikitsugui-print-only h3 {
+    margin: 10px 0 6px;
+  }
+
+  .hikitsugui-print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 .day-cell-button.is-alert {
   background-color: #fff3c8;
   color: #6d4f00;
