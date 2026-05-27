@@ -30,17 +30,6 @@ function employeeLabel(employee) {
   return employee?.name_en || employee?.internal_name || employee?.name_jp || employee?.employee_id || '-';
 }
 
-function employeeCode(employee) {
-  return employee?.employee_cd || employee?.employee_id || '-';
-}
-
-function formatMinutes(minutes = 0) {
-  const value = Number(minutes || 0);
-  const sign = value < 0 ? '-' : '';
-  const abs = Math.abs(value);
-  return `${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
-}
-
 function renderCellText(cell, i18n) {
   if (!cell) return '';
 
@@ -164,21 +153,7 @@ export default function OperationsCalendarPrint() {
   };
 
   const printableAssignments = useMemo(() => {
-    const rank = (assignment) => {
-      const visualCode = getAssignmentVisualCode(assignment);
-      if (['manager', 'director', 'supervisor', 'gl', 'koutei_leader'].includes(assignment.operational_category)) return 300;
-      if (visualCode === 'relief') return 280;
-      if (visualCode === 'trainee') return 140;
-      return 100;
-    };
-
-    const sortedAssignments = [...assignments].sort((a, b) => {
-      const rankDiff = rank(a) - rank(b);
-      if (rankDiff !== 0) return rankDiff;
-      return (a.display_order || 0) - (b.display_order || 0);
-    });
-
-    const filtered = sortedAssignments
+    const filtered = assignments
       .filter((assignment) => {
         const visualCode = getAssignmentVisualCode(assignment);
         const visual = visualCategoryByCode[visualCode];
@@ -186,8 +161,8 @@ export default function OperationsCalendarPrint() {
       });
 
     // Fallback operacional: nunca deixar a impressão sem linhas por filtro de categoria.
-    if (sortedAssignments.length > 0 && filtered.length === 0) {
-      return sortedAssignments;
+    if (assignments.length > 0 && filtered.length === 0) {
+      return assignments;
     }
     return filtered;
   }, [assignments, visualCategoryByCode]);
@@ -341,14 +316,8 @@ export default function OperationsCalendarPrint() {
                   <thead>
                     <tr>
                       <th>SCD</th>
-                      <th>所定</th>
-                      <th>残業</th>
-                      <th>過重</th>
-                      <th>人数</th>
                       <th>{t('operations.name')}</th>
                       <th>和名</th>
-                      <th>{t('operations.code')}</th>
-                      <th>{t('operations.category')}</th>
                       {days.map((day) => (
                         <th key={day.date} className={new Date(day.date).getDay() === 0 ? 'sunday-head' : ''}>
                           <span className="print-day-number">{day.day}</span>
@@ -361,7 +330,6 @@ export default function OperationsCalendarPrint() {
                   </thead>
                   <tbody>
                     {printableAssignments.map((assignment) => {
-                      const totals = assignmentTotalsMap[assignment.id];
                       const groupStyle = rotationStyleByGroup[assignment.rotation_group];
                       const visualCode = getAssignmentVisualCode(assignment);
                       const visual = visualCategoryByCode[visualCode];
@@ -370,11 +338,8 @@ export default function OperationsCalendarPrint() {
                       return (
                       <tr key={assignment.id} className={rowClass}>
                         <td>{assignment.display_order}</td>
-                        <td>{totals?.scheduled_regular_formatted || formatMinutes(totals?.scheduled_regular_minutes_total)}</td>
-                        <td>{totals?.actual_overtime_formatted || formatMinutes(totals?.actual_overtime_minutes_total)}</td>
-                        <td>{totals?.overload_formatted || formatMinutes(totals?.overload_minutes)}</td>
-                        <td>1</td>
                         <td
+                          className="print-name-cell"
                           style={{
                             backgroundColor: groupStyle?.background_color || undefined,
                             color: groupStyle?.text_color || undefined,
@@ -390,19 +355,6 @@ export default function OperationsCalendarPrint() {
                         >
                           {assignment.employee_detail?.name_jp || '-'}
                         </td>
-                        <td
-                          style={{
-                            backgroundColor: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
-                              ? visual?.background_color
-                              : undefined,
-                            color: ['koutei_leader', 'trainer', 'retired'].includes(visualCode)
-                              ? visual?.text_color
-                              : undefined,
-                          }}
-                        >
-                          {employeeCode(assignment.employee_detail)}
-                        </td>
-                        <td>{t(`operations.categories.${assignment.operational_category}`)}</td>
                         {days.map((day) => {
                           const cell = cellMap[`${assignment.id}-${day.date}`];
                           return (

@@ -55,6 +55,23 @@ function employeeCode(employee) {
   return employee?.employee_cd || employee?.employee_id || '-';
 }
 
+function normalizeSearchText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeShiftToken(value) {
+  const token = normalizeSearchText(value);
+  if (!token) return '';
+  if (['day', 'dia', '昼', '昼勤', 'd'].includes(token)) return 'day';
+  if (['night', 'noite', '夜', '夜勤', 'n'].includes(token)) return 'night';
+  if (['flexible', 'flex', 'flexivel', 'flexível'].includes(token)) return 'flexible';
+  return token;
+}
+
 function getWeekdayLabel(date, i18n) {
   const locale = i18n?.language === 'ja-JP' ? 'ja-JP' : 'pt-BR';
   return new Date(`${date}T00:00:00`).toLocaleDateString(locale, { weekday: 'short' });
@@ -254,6 +271,8 @@ export default function OperationsCalendarGrid() {
   const [isApplyingHistory, setIsApplyingHistory] = useState(false);
   const [fillDragState, setFillDragState] = useState(null);
   const gridWrapRef = useRef(null);
+  const employeeSearchRef = useRef(null);
+  const internalClipboardRef = useRef({ plainText: '', payload: null, updatedAt: 0 });
   const [loading, setLoading] = useState(true);
   const [savingCell, setSavingCell] = useState(false);
   const [addingAssignment, setAddingAssignment] = useState(false);
@@ -265,6 +284,9 @@ export default function OperationsCalendarGrid() {
   const [syncingAssignments, setSyncingAssignments] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [editingAssignmentForm, setEditingAssignmentForm] = useState(null);
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+  const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
+  const [employeeHighlightIndex, setEmployeeHighlightIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
@@ -362,27 +384,129 @@ export default function OperationsCalendarGrid() {
     [days]
   );
 
+  const resolveAssignmentCategory = (assignment) => {
+    const masterBillingToken = String(
+      assignment.billing_rate?.code ||
+        assignment.employee_detail?.billing_rate_detail?.code ||
+        assignment.employee_detail?.billing_rate_code ||
+        assignment.employee_detail?.rank ||
+        ''
+    )
+      .toLowerCase()
+      .trim();
+    const processToken = String(
+      assignment.process?.code ||
+        assignment.employee_detail?.process_detail?.code ||
+        assignment.employee_detail?.process_code ||
+        assignment.employee_detail?.process ||
+        ''
+    )
+      .toLowerCase()
+      .trim();
+    const rawCategory = String(
+      assignment.operational_category ||
+        assignment.employee_detail?.operational_category ||
+        ''
+    )
+      .toLowerCase()
+      .trim();
+    const category = rawCategory === 'kl' ? 'koutei_leader' : rawCategory;
+    let resolved = 'other';
+    if (category === 'normal') resolved = 'normal';
+    if (['koutei_leader'].includes(category) || masterBillingToken.includes('kl') || masterBillingToken.includes('koutei')) resolved = 'koutei_leader';
+    if (['relief', 'trainer', 'ririfu', 'apoio'].includes(category) || masterBillingToken.includes('relief') || processToken.includes('relief')) resolved = 'relief';
+    if (['gl', 'supervisor', 'manager', 'director'].includes(category)) resolved = 'leadership';
+
+    const labelMap = {
+      normal: 'Normal',
+      koutei_leader: 'Koutei Leader',
+      relief: category === 'trainer' ? 'Trainer' : 'Relief',
+      leadership: category === 'gl' ? 'GL' : 'Liderança',
+      other: 'Outro',
+    };
+    return {
+      key: resolved,
+      label: assignment.category_label || labelMap[resolved] || 'Outro',
+    };
+  };
+
   const getAssignmentVisualCode = (assignment) => {
     if (assignment.employee_detail?.retired || assignment.employee_detail?.end_work) return 'retired';
-    const category = assignment.operational_category;
-    if (category === 'relief') return 'relief';
-    if (category === 'koutei_leader') return 'koutei_leader';
-    if (category === 'trainer') return 'trainer';
+    const resolved = resolveAssignmentCategory(assignment);
+    if (resolved.key === 'koutei_leader') return 'koutei_leader';
+    if (resolved.key === 'relief') return 'relief';
+    if (resolved.key === 'leadership') return 'trainer';
     if ((assignment.notes || '').toLowerCase().includes('trainee')) return 'trainee';
     return 'normal';
   };
 
   const assignmentsForGrid = useMemo(() => {
-    const rank = (assignment) => {
-      const visualCode = getAssignmentVisualCode(assignment);
-      if (['manager', 'director', 'supervisor', 'gl', 'koutei_leader'].includes(assignment.operational_category)) return 300;
-      if (visualCode === 'relief') return 280;
-      if (visualCode === 'trainee') return 140;
-      return 100;
+    const resolvedCategory = (assignment) => {
+      const token = String(assignment.operational_category || assignment.employee_detail?.operational_category || '').toLowerCase().trim();
+      const billingToken = String(
+        assignment.employee_detail?.billing_rate_detail?.code ||
+          assignment.employee_detail?.billing_rate_code ||
+          assignment.employee_detail?.billing_rate ||
+          assignment.employee_detail?.rank ||
+          ''
+      )
+        .toLowerCase()
+        .trim();
+      const processToken = String(
+        assignment.employee_detail?.process_detail?.code ||
+          assignment.employee_detail?.process_code ||
+          assignment.employee_detail?.process ||
+          ''
+      )
+        .toLowerCase()
+        .trim();
+      if (token === 'kl' || token === 'koutei_leader' || billingToken.includes('kl') || billingToken.includes('koutei')) return 'koutei_leader';
+      if (['ririfu', 'apoio', 'relief', 'trainer'].includes(token) || billingToken.includes('relief') || processToken.includes('relief')) return 'relief';
+      if (['gl', 'supervisor', 'manager', 'director', 'leader', 'lider', 'lideranca', 'supervisao'].includes(token)) return 'leadership';
+      if (token === 'normal') return 'normal';
+      return 'other';
     };
+    const categoryRank = (assignment) => {
+      const token = resolvedCategory(assignment);
+      if (token === 'normal') return 10;
+      if (token === 'koutei_leader') return 20;
+      if (token === 'relief') return 30;
+      if (token === 'leadership') return 40;
+      return 90;
+    };
+    const groupRank = (assignment) => {
+      const token = String(assignment.rotation_group || '').toUpperCase().trim();
+      if (token === 'A') return 10;
+      if (token === 'B') return 20;
+      if (token === 'C') return 30;
+      return 90;
+    };
+    const code = (assignment) =>
+      String(assignment.employee_detail?.employee_cd || assignment.employee_detail?.employee_id || '').toLowerCase().trim();
+    const name = (assignment) => String(employeeLabel(assignment.employee_detail)).toLowerCase().trim();
+    const processCode = (assignment) =>
+      String(
+        assignment.employee_detail?.process_detail?.code ||
+          assignment.employee_detail?.process_code ||
+          assignment.employee_detail?.process ||
+          ''
+      )
+        .toLowerCase()
+        .trim();
+
     return [...assignments].sort((a, b) => {
-      const rankDiff = rank(a) - rank(b);
-      if (rankDiff !== 0) return rankDiff;
+      const categoryDiff = categoryRank(a) - categoryRank(b);
+      if (categoryDiff !== 0) return categoryDiff;
+      const groupDiff = groupRank(a) - groupRank(b);
+      if (groupDiff !== 0) return groupDiff;
+      const processDiff = processCode(a).localeCompare(processCode(b), 'pt-BR');
+      if (processDiff !== 0) return processDiff;
+      const orderDiff = (a.display_order || 0) - (b.display_order || 0);
+      if (orderDiff !== 0) return orderDiff;
+      const codeDiff = code(a).localeCompare(code(b), 'pt-BR');
+      if (codeDiff !== 0) return codeDiff;
+      const nameDiff = name(a).localeCompare(name(b), 'pt-BR');
+      if (nameDiff !== 0) return nameDiff;
       return (a.display_order || 0) - (b.display_order || 0);
     });
   }, [assignments]);
@@ -391,6 +515,103 @@ export default function OperationsCalendarGrid() {
     () => assignmentsForGrid.reduce((acc, item, index) => ({ ...acc, [item.id]: index }), {}),
     [assignmentsForGrid]
   );
+
+  const linkedEmployeeIds = useMemo(() => {
+    const ids = new Set();
+    assignments.forEach((assignment) => {
+      const idValue = String(
+        assignment.employee_detail?.employee_id ||
+          assignment.employee_detail?.id ||
+          assignment.employee ||
+          assignment.employee_id ||
+          ''
+      ).trim();
+      if (idValue) ids.add(idValue);
+    });
+    return ids;
+  }, [assignments]);
+
+  const selectedEmployee = useMemo(() => {
+    const idValue = String(assignmentForm.employee || '').trim();
+    if (!idValue) return null;
+    return (
+      employees.find((employee) => String(employee.employee_id || employee.id || '').trim() === idValue) || null
+    );
+  }, [assignmentForm.employee, employees]);
+
+  const employeeOptions = useMemo(() => {
+    const calendarDepartmentId = Number(calendar?.department || 0);
+    const calendarShift = normalizeShiftToken(calendar?.shift);
+    const calendarProcess = normalizeSearchText(calendar?.process);
+    const query = normalizeSearchText(employeeSearchTerm);
+    const shouldFilter = query.length >= 2;
+
+    const base = employees
+      .map((employee) => {
+        const employeeId = String(employee.employee_id || employee.id || '').trim();
+        if (!employeeId) return null;
+        const shiftToken = normalizeShiftToken(employee.shift_type || employee.shift || employee.work_shift);
+        const processToken = normalizeSearchText(employee.process || employee.process_code || employee.line || employee.line_code);
+        const departmentId = Number(employee.department || employee.department_id || employee.department_detail?.id || 0);
+        const isActive = !(employee.retired || employee.end_work) && employee.active !== false && employee.is_active !== false;
+        const alreadyLinked = linkedEmployeeIds.has(employeeId);
+        const departmentMatch = calendarDepartmentId > 0 ? departmentId === calendarDepartmentId : true;
+        const shiftMatch = !calendarShift || !shiftToken || calendarShift === shiftToken;
+        const processMatch = !calendarProcess || !processToken || processToken.includes(calendarProcess) || calendarProcess.includes(processToken);
+        const compatible = isActive && !alreadyLinked && departmentMatch && shiftMatch && processMatch;
+        const searchTokens = normalizeSearchText(
+          [
+            employeeId,
+            employeeCode(employee),
+            employee.name,
+            employee.name_en,
+            employee.name_jp,
+            employee.internal_name,
+            employee.kana_name,
+            employee.name_kana,
+            employee.nickname,
+            employee.alias_name,
+            employee.alternative_name,
+          ]
+            .filter(Boolean)
+            .join(' ')
+        );
+        const matchesQuery = !shouldFilter || searchTokens.includes(query);
+        const warnings = [];
+        if (alreadyLinked) warnings.push('já vinculado');
+        if (!isActive) warnings.push('inativo');
+        if (!departmentMatch) warnings.push('departamento diferente');
+        if (!shiftMatch) warnings.push('turno diferente');
+        if (!processMatch) warnings.push('processo diferente');
+        return {
+          employee,
+          employeeId,
+          name: employeeLabel(employee),
+          code: employeeCode(employee),
+          shiftLabel: employee.shift || employee.shift_type || '-',
+          groupLabel: employee.rotation_group || employee.group || '-',
+          departmentLabel: employee.department_detail?.code || employee.department_code || employee.department || '-',
+          workPattern: employee.work_pattern || '-',
+          compatible,
+          alreadyLinked,
+          warnings,
+          matchesQuery,
+        };
+      })
+      .filter(Boolean);
+
+    const ordered = base
+      .sort((a, b) => {
+        if (a.compatible !== b.compatible) return a.compatible ? -1 : 1;
+        if (a.alreadyLinked !== b.alreadyLinked) return a.alreadyLinked ? 1 : -1;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      })
+      .filter((item) => item.matchesQuery);
+
+    return ordered.slice(0, shouldFilter ? 40 : 25);
+  }, [employees, calendar, employeeSearchTerm, linkedEmployeeIds]);
+
+  const activeEmployeeOption = employeeOptions[employeeHighlightIndex] || employeeOptions[0] || null;
 
   const loadData = async () => {
     setLoading(true);
@@ -510,6 +731,21 @@ export default function OperationsCalendarGrid() {
     loadData();
   }, [id]);
 
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!employeeSearchRef.current) return;
+      if (!employeeSearchRef.current.contains(event.target)) {
+        setEmployeeSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    setEmployeeHighlightIndex(0);
+  }, [employeeSearchTerm, employeeOptions.length]);
+
   const updateAssignmentField = (event) => {
     const { name, value } = event.target;
     setAssignmentForm((current) => ({ ...current, [name]: value }));
@@ -610,6 +846,11 @@ export default function OperationsCalendarGrid() {
 
   const addAssignment = async (event) => {
     event.preventDefault();
+    if (!assignmentForm.employee) {
+      setIsError(true);
+      setStatusMessage('Selecione um funcionário para adicionar.');
+      return;
+    }
     setAddingAssignment(true);
     setIsError(false);
     setStatusMessage('');
@@ -639,9 +880,19 @@ export default function OperationsCalendarGrid() {
       notes: '',
       display_order: assignments.length + 1,
     }));
+    setEmployeeSearchTerm('');
+    setEmployeeSearchOpen(false);
+    setEmployeeHighlightIndex(0);
     setStatusMessage(t('operations.assignmentCreated'));
     await loadData();
     setAddingAssignment(false);
+  };
+
+  const selectEmployeeOption = (option) => {
+    if (!option || option.alreadyLinked) return;
+    setAssignmentForm((current) => ({ ...current, employee: option.employeeId }));
+    setEmployeeSearchTerm(`${option.name} (${option.code})`);
+    setEmployeeSearchOpen(false);
   };
 
   const generateSchedule = async (event) => {
@@ -1078,6 +1329,43 @@ export default function OperationsCalendarGrid() {
     setSavingRequirement(false);
   };
 
+  const replicateRequirement = async (mode, weekdaysOnly = false) => {
+    if (!requirementForm.position || !requirementForm.date) {
+      setIsError(true);
+      setStatusMessage('Selecione posição e data para replicar.');
+      return;
+    }
+    const modeText = mode === 'all' ? 'todos os dias do mês' : 'dias restantes do mês';
+    const weekText = weekdaysOnly ? ' (somente dias úteis)' : '';
+    const confirmed = window.confirm(`Replicar a quantidade necessária para ${modeText}${weekText}?`);
+    if (!confirmed) return;
+
+    setSavingRequirement(true);
+    setIsError(false);
+    setStatusMessage('');
+    const res = await authFetch(`${apiUrl(`/api/operations/calendars/${id}/requirements/replicate/`)}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        position: Number(requirementForm.position),
+        date: requirementForm.date,
+        required_headcount: Number(requirementForm.required_headcount || 0),
+        notes: requirementForm.notes,
+        mode,
+        weekdays_only: weekdaysOnly,
+      }),
+    });
+    const data = await readJson(res);
+    if (!res.ok) {
+      setStatusMessage(formatApiMessage(data, 'Falha ao replicar quantidade necessária.'));
+      setIsError(true);
+      setSavingRequirement(false);
+      return;
+    }
+    setStatusMessage(`Quantidade replicada para ${data?.affected_days || 0} dias`);
+    await loadData();
+    setSavingRequirement(false);
+  };
+
   const pasteCells = async (event) => {
     event.preventDefault();
 
@@ -1495,15 +1783,36 @@ export default function OperationsCalendarGrid() {
       event.preventDefault();
       await copySelectionToClipboard();
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') {
-      if (navigator?.clipboard?.readText) {
-        event.preventDefault();
-        try {
-          const text = await navigator.clipboard.readText();
-          await applyClipboardText(text);
-        } catch {
-          setStatusMessage('Nao foi possivel acessar a area de transferencia');
-          setIsError(true);
+      event.preventDefault();
+      try {
+        if (navigator?.clipboard?.read) {
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            if (item.types.includes('application/x-fujihub-grid')) {
+              const blob = await item.getType('application/x-fujihub-grid');
+              const jsonRaw = await blob.text();
+              const payload = JSON.parse(jsonRaw);
+              const handled = await applyClipboardPayload(payload);
+              if (handled) return;
+            }
+          }
         }
+        if (internalClipboardRef.current?.payload) {
+          const handled = await applyClipboardPayload(internalClipboardRef.current.payload);
+          if (handled) return;
+        }
+        if (navigator?.clipboard?.readText) {
+          const text = await navigator.clipboard.readText();
+          const cached = internalClipboardRef.current;
+          if (cached?.payload && text && cached.plainText === text) {
+            const handled = await applyClipboardPayload(cached.payload);
+            if (handled) return;
+          }
+          await applyClipboardText(text);
+          return;
+        }
+      } catch {
+        // Fallback: native onPaste handler on the grid may still process this.
       }
     }
   };
@@ -1927,22 +2236,80 @@ export default function OperationsCalendarGrid() {
     if (!bounds) return;
 
     const lines = [];
+    const matrix = [];
+    const editableFields = [
+      'position',
+      'attendance_status',
+      'work_time_code',
+      'operational_code',
+      'overtime_minutes',
+      'start_time',
+      'end_time',
+      'break_minutes',
+      'crosses_midnight',
+      'manual_time_override',
+      'leave_time',
+      'time_note',
+      'memo',
+      'raw_value',
+    ];
     for (let row = bounds.startRow; row <= bounds.endRow; row += 1) {
       const values = [];
+      const payloadRow = [];
       for (let col = bounds.startCol; col <= bounds.endCol; col += 1) {
         const target = getCellByCoord(row, col);
         if (!target) {
           values.push('');
+          payloadRow.push(null);
           continue;
         }
         const cell = cellMap[target.assignment.id + '-' + target.day.date];
         values.push(getCellClipboardValue(cell));
+        const { form } = buildCellForm(target.assignment, target.day);
+        const payloadForm = editableFields.reduce((acc, field) => {
+          acc[field] = form[field] ?? '';
+          return acc;
+        }, {});
+        payloadRow.push(payloadForm);
       }
       lines.push(values.join('	'));
+      matrix.push(payloadRow);
     }
 
     const tsv = lines.join('\n');
+    const internalPayload = JSON.stringify({
+      version: 1,
+      kind: 'fujihub-grid-cells',
+      rows: matrix.length,
+      cols: matrix[0]?.length || 0,
+      matrix,
+    });
+    const internalPayloadObject = {
+      version: 1,
+      kind: 'fujihub-grid-cells',
+      rows: matrix.length,
+      cols: matrix[0]?.length || 0,
+      matrix,
+    };
+    internalClipboardRef.current = {
+      plainText: tsv,
+      payload: internalPayloadObject,
+      updatedAt: Date.now(),
+    };
+    if (import.meta.env.DEV) {
+      console.debug('[grid-copy] internal payload', internalPayloadObject);
+    }
     try {
+      if (navigator?.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        const item = new ClipboardItem({
+          'text/plain': new Blob([tsv], { type: 'text/plain' }),
+          'application/x-fujihub-grid': new Blob([internalPayload], { type: 'application/x-fujihub-grid' }),
+        });
+        await navigator.clipboard.write([item]);
+        setStatusMessage('Copiado');
+        setIsError(false);
+        return;
+      }
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(tsv);
         setStatusMessage('Copiado');
@@ -2028,9 +2395,105 @@ export default function OperationsCalendarGrid() {
     if (successCount === 0) return;
   };
 
+  const applyClipboardPayload = async (payload) => {
+    if (!activeCell || isGridBusy) return;
+    if (!payload || payload.kind !== 'fujihub-grid-cells' || !Array.isArray(payload.matrix)) return false;
+    if (import.meta.env.DEV) {
+      console.debug('[grid-paste] internal payload received', payload);
+    }
+
+    const rows = payload.matrix;
+    if (rows.length === 0) return false;
+    const cols = Array.isArray(rows[0]) ? rows[0].length : 0;
+    if (cols === 0) return false;
+
+    const singleCell = rows.length === 1 && cols === 1;
+    const updates = [];
+    const editableFields = new Set([
+      'position',
+      'attendance_status',
+      'work_time_code',
+      'operational_code',
+      'overtime_minutes',
+      'start_time',
+      'end_time',
+      'break_minutes',
+      'crosses_midnight',
+      'manual_time_override',
+      'leave_time',
+      'time_note',
+      'memo',
+      'raw_value',
+    ]);
+
+    if (singleCell && selectionRange?.anchor && selectionRange?.target) {
+      const bounds = getSelectionBounds();
+      const source = rows[0][0] || {};
+      for (let row = bounds.startRow; row <= bounds.endRow; row += 1) {
+        for (let col = bounds.startCol; col <= bounds.endCol; col += 1) {
+          const target = getCellByCoord(row, col);
+          if (!target) continue;
+          const { existing, form } = buildCellForm(target.assignment, target.day);
+          const merged = { ...form };
+          Object.entries(source || {}).forEach(([key, value]) => {
+            if (!editableFields.has(key)) return;
+            merged[key] = value ?? '';
+          });
+          updates.push({ assignment: target.assignment, day: target.day, existing, form: merged });
+        }
+      }
+    } else {
+      for (let rowOffset = 0; rowOffset < rows.length; rowOffset += 1) {
+        const dataRow = rows[rowOffset];
+        for (let colOffset = 0; colOffset < (Array.isArray(dataRow) ? dataRow.length : 0); colOffset += 1) {
+          const target = getCellByCoord(activeCell.row + rowOffset, activeCell.col + colOffset);
+          if (!target) continue;
+          const source = dataRow[colOffset] || {};
+          const { existing, form } = buildCellForm(target.assignment, target.day);
+          const merged = { ...form };
+          Object.entries(source || {}).forEach(([key, value]) => {
+            if (!editableFields.has(key)) return;
+            merged[key] = value ?? '';
+          });
+          updates.push({ assignment: target.assignment, day: target.day, existing, form: merged });
+        }
+      }
+    }
+
+    if (updates.length === 0) {
+      setStatusMessage('Nenhuma celula valida para colar');
+      setIsError(true);
+      return true;
+    }
+    if (import.meta.env.DEV) {
+      console.debug('[grid-paste] final updates payload', updates.slice(0, 3).map((item) => item.form));
+    }
+    const result = await executeCellUpdates(updates, { label: 'paste', recordHistory: true, silent: false });
+    if (result.successCount > 0) {
+      setStatusMessage(`Colado ${result.successCount} células`);
+      setIsError(false);
+    }
+    return true;
+  };
+
   const handleGridPaste = async (event) => {
     event.preventDefault();
+    const jsonRaw = event.clipboardData?.getData('application/x-fujihub-grid');
+    if (jsonRaw) {
+      try {
+        const payload = JSON.parse(jsonRaw);
+        const handled = await applyClipboardPayload(payload);
+        if (handled) return;
+      } catch {
+        // fallback to plain text parser
+      }
+    }
     const text = event.clipboardData?.getData('text/plain') || '';
+    const cached = internalClipboardRef.current;
+    if (cached?.payload && text && cached.plainText === text) {
+      const handled = await applyClipboardPayload(cached.payload);
+      if (handled) return;
+    }
     await applyClipboardText(text);
   };
 
@@ -2084,70 +2547,64 @@ export default function OperationsCalendarGrid() {
     >
       <section className="operations-grid-shell">
         <div className="inventory-panel operations-assignment-panel">
-          <div className="inventory-panel-header">
-            <div>
-              <p className="inventory-eyebrow">{t('operations.assignments')}</p>
-              <h2>{t('operations.addEmployee')}</h2>
+            <div className="inventory-panel-header">
+              <div>
+                <p className="inventory-eyebrow">{t('operations.assignments')}</p>
+                <h2>{t('operations.addEmployee')}</h2>
+              </div>
+              <div className="operations-toolbar-groups">
+                <div className="operations-toolbar-group">
+                  <span className="operations-toolbar-title">Navegação</span>
+                  <Link className="inventory-secondary-button" to="/operations/calendars">
+                    {t('operations.backToCalendars')}
+                  </Link>
+                  <button className="inventory-secondary-button" type="button" disabled={loading} onClick={loadData}>
+                    {loading ? t('common.refreshing') : t('common.refresh')}
+                  </button>
+                </div>
+                <div className="operations-toolbar-group">
+                  <span className="operations-toolbar-title">Operação</span>
+                  <button className="inventory-secondary-button" type="button" onClick={() => setShowImportPanel((current) => !current)}>
+                    {t('operations.importEmployees')}
+                  </button>
+                  <button className="inventory-secondary-button" type="button" onClick={() => setShowGeneratePanel((current) => !current)}>
+                    {t('operations.generateSchedule')}
+                  </button>
+                  <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openSaveTemplatePanel}>
+                    Salvar template
+                  </button>
+                  <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openApplyTemplatePanel}>
+                    Aplicar template
+                  </button>
+                </div>
+                <div className="operations-toolbar-group">
+                  <span className="operations-toolbar-title">Ciclo mensal</span>
+                  <button className="inventory-secondary-button" type="button" disabled={loading || processingMonthOps} onClick={duplicateFromPreviousMonth}>
+                    Duplicar mês anterior
+                  </button>
+                  <button className="inventory-secondary-button" type="button" disabled={loading || processingMonthOps} onClick={generateNextMonth}>
+                    Gerar próximo mês
+                  </button>
+                </div>
+                <div className="operations-toolbar-group">
+                  <span className="operations-toolbar-title">Saída / Auditoria</span>
+                  <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={exportExcel}>
+                    {exportingExcel ? 'Exportando Excel...' : 'Exportar Excel'}
+                  </button>
+                  <Link className="inventory-secondary-button" to={`/operations/calendars/${id}/print`} target="_blank" rel="noopener noreferrer">
+                    Imprimir / PDF
+                  </Link>
+                  <button
+                    className="inventory-secondary-button"
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setShowHistoryPanel((current) => !current)}
+                  >
+                    Histórico
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="inventory-panel-tools">
-              <Link className="inventory-secondary-button" to="/operations/calendars">
-                {t('operations.backToCalendars')}
-              </Link>
-              <Link className="inventory-secondary-button" to={`/operations/calendars/${id}/print`} target="_blank" rel="noopener noreferrer">
-                Imprimir / PDF
-              </Link>
-              <button
-                className="inventory-secondary-button"
-                type="button"
-                onClick={() => setShowGeneratePanel((current) => !current)}
-              >
-                {t('operations.generateSchedule')}
-              </button>
-              <button
-                className="inventory-secondary-button"
-                type="button"
-                onClick={() => setShowImportPanel((current) => !current)}
-              >
-                {t('operations.importEmployees')}
-              </button>
-              <button className="inventory-secondary-button" type="button" disabled={loading} onClick={loadData}>
-                {loading ? t('common.refreshing') : t('common.refresh')}
-              </button>
-              <button
-                className="inventory-secondary-button"
-                type="button"
-                disabled={loading || processingMonthOps}
-                onClick={duplicateFromPreviousMonth}
-              >
-                Duplicar mês anterior
-              </button>
-              <button
-                className="inventory-secondary-button"
-                type="button"
-                disabled={loading || processingMonthOps}
-                onClick={generateNextMonth}
-              >
-                Gerar próximo mês
-              </button>
-              <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={exportExcel}>
-                {exportingExcel ? 'Exportando Excel...' : 'Exportar Excel'}
-              </button>
-              <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openSaveTemplatePanel}>
-                Salvar como template
-              </button>
-              <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openApplyTemplatePanel}>
-                Aplicar template
-              </button>
-              <button
-                className="inventory-secondary-button"
-                type="button"
-                disabled={loading}
-                onClick={() => setShowHistoryPanel((current) => !current)}
-              >
-                Histórico
-              </button>
-            </div>
-          </div>
 
           {statusMessage ? (
             <span className={`inventory-status ${isError ? 'error' : ''}`}>{statusMessage}</span>
@@ -2293,14 +2750,77 @@ export default function OperationsCalendarGrid() {
           <form className="operations-inline-form" onSubmit={addAssignment}>
             <label className="inventory-field">
               <span>{t('operations.employee')}</span>
-              <select name="employee" value={assignmentForm.employee} onChange={updateAssignmentField} required>
-                <option value="">{t('common.select')}</option>
-                {employees.map((employee) => (
-                  <option key={employee.employee_id} value={employee.employee_id}>
-                    {employee.employee_id} - {employeeLabel(employee)}
-                  </option>
-                ))}
-              </select>
+              <div className="operations-employee-autocomplete" ref={employeeSearchRef}>
+                <input
+                  type="text"
+                  value={employeeSearchTerm}
+                  placeholder="Digite nome, código ou nome JP"
+                  onFocus={() => setEmployeeSearchOpen(true)}
+                  onChange={(event) => {
+                    setEmployeeSearchTerm(event.target.value);
+                    setEmployeeSearchOpen(true);
+                    setAssignmentForm((current) => ({ ...current, employee: '' }));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      setEmployeeSearchOpen(false);
+                      return;
+                    }
+                    if (event.key === 'ArrowDown') {
+                      event.preventDefault();
+                      setEmployeeSearchOpen(true);
+                      setEmployeeHighlightIndex((current) => Math.min(current + 1, Math.max(employeeOptions.length - 1, 0)));
+                      return;
+                    }
+                    if (event.key === 'ArrowUp') {
+                      event.preventDefault();
+                      setEmployeeHighlightIndex((current) => Math.max(current - 1, 0));
+                      return;
+                    }
+                    if (event.key === 'Enter' && employeeSearchOpen && activeEmployeeOption) {
+                      event.preventDefault();
+                      selectEmployeeOption(activeEmployeeOption);
+                    }
+                  }}
+                  required={!assignmentForm.employee}
+                />
+                <input type="hidden" name="employee" value={assignmentForm.employee} required />
+                {employeeSearchOpen ? (
+                  <div className="operations-employee-dropdown">
+                    {employeeSearchTerm.trim().length < 2 ? (
+                      <div className="operations-employee-empty">Digite ao menos 2 caracteres</div>
+                    ) : employeeOptions.length === 0 ? (
+                      <div className="operations-employee-empty">Nenhum funcionário encontrado</div>
+                    ) : (
+                      employeeOptions.map((option, index) => (
+                        <button
+                          key={option.employeeId}
+                          type="button"
+                          className={`operations-employee-option ${index === employeeHighlightIndex ? 'is-highlighted' : ''} ${option.compatible ? 'is-compatible' : 'is-other'} ${option.alreadyLinked ? 'is-linked' : ''}`}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => selectEmployeeOption(option)}
+                          disabled={option.alreadyLinked}
+                        >
+                          <strong>{option.name} ({option.code})</strong>
+                          <span>Turno: {option.shiftLabel} • Grupo: {option.groupLabel} • Depto: {option.departmentLabel}</span>
+                          <span>
+                            Padrão: {option.workPattern}
+                            {option.warnings.length ? ` • ${option.warnings.join(' • ')}` : ''}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              {selectedEmployee ? (
+                <small className="operations-employee-help">
+                  Selecionado: {employeeLabel(selectedEmployee)} ({employeeCode(selectedEmployee)})
+                </small>
+              ) : (
+                <small className="operations-employee-help">Compatíveis do calendário aparecem primeiro.</small>
+              )}
             </label>
 
             <label className="inventory-field">
@@ -2389,7 +2909,7 @@ export default function OperationsCalendarGrid() {
               <input name="display_order" type="number" value={assignmentForm.display_order} onChange={updateAssignmentField} />
             </label>
 
-            <button className="inventory-primary-button" type="submit" disabled={addingAssignment || loading}>
+            <button className="inventory-primary-button" type="submit" disabled={addingAssignment || loading || !assignmentForm.employee}>
               {addingAssignment ? t('common.creating') : t('operations.addEmployee')}
             </button>
           </form>
@@ -2803,9 +3323,21 @@ export default function OperationsCalendarGrid() {
                 <tbody>
                   {assignmentsForGrid.map((assignment) => {
                     const groupStyle = rotationStyleByGroup[assignment.rotation_group];
+                    const resolvedCategory = resolveAssignmentCategory(assignment);
                     const visualCode = getAssignmentVisualCode(assignment);
                     const visual = visualCategoryByCode[visualCode];
-                    const rowClass = visual?.target_column === 'row' || visualCode === 'trainee' ? 'row-trainee' : '';
+                    const rowClass =
+                      visual?.target_column === 'row' || visualCode === 'trainee'
+                        ? 'row-trainee'
+                        : visualCode === 'koutei_leader'
+                          ? 'row-koutei-leader'
+                          : visualCode === 'relief'
+                            ? 'row-relief'
+                            : ['trainer'].includes(visualCode)
+                              ? 'row-leadership'
+                              : resolvedCategory.key === 'other'
+                                ? 'row-other'
+                                : '';
                     const totals = assignmentTotalsMap[assignment.id];
                     return (
                     <tr key={assignment.id} className={rowClass}>
@@ -2842,8 +3374,12 @@ export default function OperationsCalendarGrid() {
                         {employeeCode(assignment.employee_detail)}
                       </td>
                       <td className="sticky-col category">
-                        <button type="button" className="quick-chip" onClick={() => openAssignmentEditor(assignment)}>
-                          {t(`operations.categories.${assignment.operational_category}`)}
+                        <button
+                          type="button"
+                          className={`quick-chip operations-category-badge is-${resolvedCategory.key}`}
+                          onClick={() => openAssignmentEditor(assignment)}
+                        >
+                          {resolvedCategory.label}
                         </button>
                       </td>
                       <td className="sticky-col regular">{totals?.scheduled_regular_formatted || '0:00'}</td>
@@ -3291,6 +3827,35 @@ export default function OperationsCalendarGrid() {
                 <button className="inventory-primary-button" type="submit" disabled={savingRequirement || loading}>
                   {savingRequirement ? t('common.saving') : t('operations.saveRequirement')}
                 </button>
+                <details className="operations-replicate-menu">
+                  <summary className={`inventory-secondary-button ${(savingRequirement || loading) ? 'is-disabled' : ''}`}>Replicar...</summary>
+                  <div className="operations-replicate-dropdown">
+                    <button
+                      className="inventory-secondary-button"
+                      type="button"
+                      disabled={savingRequirement || loading}
+                      onClick={() => replicateRequirement('remaining', false)}
+                    >
+                      Para dias restantes
+                    </button>
+                    <button
+                      className="inventory-secondary-button"
+                      type="button"
+                      disabled={savingRequirement || loading}
+                      onClick={() => replicateRequirement('all', false)}
+                    >
+                      Para mês todo
+                    </button>
+                    <button
+                      className="inventory-secondary-button"
+                      type="button"
+                      disabled={savingRequirement || loading}
+                      onClick={() => replicateRequirement('all', true)}
+                    >
+                      Para dias úteis
+                    </button>
+                  </div>
+                </details>
               </div>
             </form>
           </div>
