@@ -156,11 +156,11 @@ export default function OperationsCalendarPrint() {
     setLoadError('');
 
     const [calendarRes, assignmentsRes, cellsRes, summaryRes, totalsRes, rotationRes, visualRes, processesRes, shiftsRes] = await Promise.all([
-      authFetch(`${apiUrl('/api/operations/calendars/${id}/')}`),
-      authFetch(`${apiUrl('/api/operations/calendars/${id}/assignments/')}`),
-      authFetch(`${apiUrl('/api/operations/calendars/${id}/cells/')}`),
-      authFetch(`${apiUrl('/api/operations/calendars/${id}/summary/')}`),
-      authFetch(`${apiUrl('/api/operations/calendars/${id}/assignment-totals/')}`),
+      authFetch(`${apiUrl(`/api/operations/calendars/${id}/`)}`),
+      authFetch(`${apiUrl(`/api/operations/calendars/${id}/assignments/`)}`),
+      authFetch(`${apiUrl(`/api/operations/calendars/${id}/cells/`)}`),
+      authFetch(`${apiUrl(`/api/operations/calendars/${id}/summary/`)}`),
+      authFetch(`${apiUrl(`/api/operations/calendars/${id}/assignment-totals/`)}`),
       authFetch(`${apiUrl('/api/operations/rotation-group-styles/')}`),
       authFetch(`${apiUrl('/api/operations/visual-categories/')}`),
       authFetch(`${apiUrl('/api/processes/')}`),
