@@ -5,6 +5,8 @@ import TemplatePanel from '../components/TemplatePanel';
 import { getLocalizedLabel } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import OperationsLayout from './OperationsLayout';
+import { useOperationPermissions } from '../hooks/useOperationPermissions';
+import { forbiddenMessage } from '../utils/apiErrors';
 
 import { apiUrl } from '../config/api';
 
@@ -48,6 +50,7 @@ function formatApiMessage(data, fallback) {
 
 export default function OperationsCalendars() {
   const { i18n, t } = useTranslation();
+  const { flags, loading: permissionsLoading } = useOperationPermissions();
   const [calendars, setCalendars] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [processes, setProcesses] = useState([]);
@@ -81,6 +84,13 @@ export default function OperationsCalendars() {
   }, [calendars, t]);
 
   const loadData = async () => {
+    if (!flags.can_view_schedule) {
+      setCalendars([]);
+      setLoading(false);
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     setLoading(true);
     setIsError(false);
 
@@ -117,8 +127,8 @@ export default function OperationsCalendars() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!permissionsLoading) loadData();
+  }, [permissionsLoading, flags.can_view_schedule]);
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -127,6 +137,11 @@ export default function OperationsCalendars() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!flags.can_edit_schedule) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     setSubmitting(true);
     setIsError(false);
     setStatusMessage('');
@@ -161,6 +176,11 @@ export default function OperationsCalendars() {
   };
 
   const duplicateFromPrevious = async (calendarId) => {
+    if (!flags.can_edit_schedule) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     if (processingCalendarId || loading) return;
     const firstConfirm = window.confirm(
       'Duplicar mês anterior para este calendário? Funcionários e base operacional serão copiados de forma conservadora.'
@@ -213,6 +233,11 @@ export default function OperationsCalendars() {
   };
 
   const generateNextMonth = async (calendarId) => {
+    if (!flags.can_edit_schedule) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     if (processingCalendarId || loading) return;
     const firstConfirm = window.confirm(
       'Gerar próximo mês com base no calendário atual? Isso pode criar novo calendário e copiar a estrutura.'
@@ -517,7 +542,7 @@ export default function OperationsCalendars() {
               <button className="inventory-secondary-button" type="button" onClick={() => setForm(emptyCalendar)}>
                 {t('common.clear')}
               </button>
-              <button className="inventory-primary-button" type="submit" disabled={submitting || loading}>
+              <button className="inventory-primary-button" type="submit" disabled={!flags.can_edit_schedule || submitting || loading}>
                 {submitting ? t('common.creating') : t('operations.createCalendar')}
               </button>
             </div>
@@ -578,7 +603,7 @@ export default function OperationsCalendars() {
                         <button
                           className="inventory-small-button"
                           type="button"
-                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          disabled={!flags.can_edit_schedule || loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
                           onClick={() => duplicateFromPrevious(calendar.id)}
                         >
                           Duplicar mês anterior
@@ -586,7 +611,7 @@ export default function OperationsCalendars() {
                         <button
                           className="inventory-small-button"
                           type="button"
-                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          disabled={!flags.can_edit_schedule || loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
                           onClick={() => generateNextMonth(calendar.id)}
                         >
                           Gerar próximo mês
@@ -594,7 +619,7 @@ export default function OperationsCalendars() {
                         <button
                           className="inventory-small-button"
                           type="button"
-                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          disabled={!flags.can_manage_templates || loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
                           onClick={() => exportCalendarExcel(calendar)}
                         >
                           {exportingCalendarId === calendar.id ? 'Exportando...' : 'Exportar Excel'}
@@ -602,7 +627,7 @@ export default function OperationsCalendars() {
                         <button
                           className="inventory-small-button"
                           type="button"
-                          disabled={loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
+                          disabled={!flags.can_manage_templates || loading || processingCalendarId === calendar.id || exportingCalendarId === calendar.id}
                           onClick={() => openSaveTemplateDialog(calendar)}
                         >
                           Salvar template

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import OperationsLayout from './OperationsLayout';
 import { authFetch } from '../utils/authFetch';
 import { apiUrl } from '../config/api';
+import { useOperationPermissions } from '../hooks/useOperationPermissions';
+import PermissionNotice from '../components/PermissionNotice';
+import { forbiddenMessage, readonlyMessage, requestAccessMessage } from '../utils/apiErrors';
 
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
@@ -23,6 +26,7 @@ function csvEscape(value) {
 }
 
 export default function OperationsAttendanceDashboard() {
+  const { flags } = useOperationPermissions();
   const [departments, setDepartments] = useState([]);
   const [processes, setProcesses] = useState([]);
   const [shifts, setShifts] = useState([]);
@@ -54,6 +58,12 @@ export default function OperationsAttendanceDashboard() {
   });
 
   const load = async () => {
+    if (!flags.can_view_attendance_dashboard) {
+      setStatusMessage(forbiddenMessage());
+      setData(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const [depRes, procRes, shiftRes] = await Promise.all([
       authFetch(`${apiUrl('/api/departments/')}`),
@@ -71,7 +81,11 @@ export default function OperationsAttendanceDashboard() {
     const suffix = params.toString() ? `?${params.toString()}` : '';
     const res = await authFetch(`${apiUrl(`/api/operations/attendance-dashboard/${suffix}`)}`);
     if (!res.ok) {
+      if (res.status === 403) {
+        setStatusMessage(forbiddenMessage());
+      } else {
       setStatusMessage('Falha ao carregar dashboard de presença.');
+      }
       setData(null);
       setLoading(false);
       return;
@@ -85,7 +99,7 @@ export default function OperationsAttendanceDashboard() {
 
   useEffect(() => {
     load();
-  }, [filters.month, filters.date_from, filters.date_to, filters.department, filters.process, filters.shift, filters.group]);
+  }, [filters.month, filters.date_from, filters.date_to, filters.department, filters.process, filters.shift, filters.group, flags.can_view_attendance_dashboard]);
 
   const summary = useMemo(() => {
     const k = data?.kpis || {};
@@ -109,6 +123,10 @@ export default function OperationsAttendanceDashboard() {
   const activeSettings = data?.settings || settingsForm;
 
   const saveSettings = async () => {
+    if (!flags.can_edit_operations_settings) {
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     if (!settingsForm) return;
     setSavingSettings(true);
     const res = await authFetch(`${apiUrl('/api/operations/settings/current/')}`, {
@@ -135,6 +153,10 @@ export default function OperationsAttendanceDashboard() {
   };
 
   const loadEmployeeDetail = async (employeeId) => {
+    if (!flags.can_view_employee_detail) {
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     if (!employeeId) return;
     setSelectedEmployeeId(employeeId);
     setIsEmployeeDrawerOpen(true);
@@ -157,6 +179,7 @@ export default function OperationsAttendanceDashboard() {
   };
 
   const exportEmployeeAttendance = () => {
+    if (!flags.can_export_attendance) return;
     if (!employeeDetail) return;
     const code = employeeDetail.employee.employee_id || 'funcionario';
     const periodToken = (filters.month || new Date().toISOString().slice(0, 7)).replace('-', '_');
@@ -211,6 +234,10 @@ export default function OperationsAttendanceDashboard() {
   };
 
   const saveAdministrativeNote = async () => {
+    if (!flags.can_create_admin_notes) {
+      setEmployeeDetailError(forbiddenMessage());
+      return;
+    }
     if (!employeeDetail || !adminNoteForm.note.trim()) return;
     setSavingAdminNote(true);
     const today = new Date().toISOString().slice(0, 10);
@@ -295,7 +322,7 @@ export default function OperationsAttendanceDashboard() {
 
         <article className="inventory-panel">
           <h2>Configuração de limites</h2>
-          {settingsForm ? (
+          {flags.can_edit_operations_settings && settingsForm ? (
             <>
               <div className="inventory-form-grid">
                 <label className="inventory-field"><span>Alerta semanal (h)</span><input type="number" value={settingsForm.weekly_warning_hours ?? 50} onChange={(event) => setSettingsForm((current) => ({ ...current, weekly_warning_hours: event.target.value }))} /></label>
@@ -312,7 +339,7 @@ export default function OperationsAttendanceDashboard() {
               </div>
             </>
           ) : (
-            <p className="inventory-empty-state">Carregando configuração...</p>
+            <PermissionNotice compact title="Limites" message={`${readonlyMessage()} ${requestAccessMessage()}`} variant="info" />
           )}
         </article>
 
@@ -323,7 +350,11 @@ export default function OperationsAttendanceDashboard() {
               <thead><tr><th>Mais faltas (mês)</th><th>Qtd</th></tr></thead>
               <tbody>
                 {(rankings.most_absences_month || []).slice(0, 10).map((row) => (
-                  <tr key={`abs-${row.assignment_id}`} style={{ cursor: 'pointer' }} onClick={() => loadEmployeeDetail(row.employee_id)}>
+                  <tr
+                    key={`abs-${row.assignment_id}`}
+                    style={{ cursor: flags.can_view_employee_detail ? 'pointer' : 'default' }}
+                    onClick={() => (flags.can_view_employee_detail ? loadEmployeeDetail(row.employee_id) : null)}
+                  >
                     <td>{row.employee_id} - {row.employee_name}</td>
                     <td>{row.count}</td>
                   </tr>
@@ -336,7 +367,11 @@ export default function OperationsAttendanceDashboard() {
               <thead><tr><th>Mais atrasos (mês)</th><th>Qtd</th></tr></thead>
               <tbody>
                 {(rankings.most_lates_month || []).slice(0, 10).map((row) => (
-                  <tr key={`late-${row.assignment_id}`} style={{ cursor: 'pointer' }} onClick={() => loadEmployeeDetail(row.employee_id)}>
+                  <tr
+                    key={`late-${row.assignment_id}`}
+                    style={{ cursor: flags.can_view_employee_detail ? 'pointer' : 'default' }}
+                    onClick={() => (flags.can_view_employee_detail ? loadEmployeeDetail(row.employee_id) : null)}
+                  >
                     <td>{row.employee_id} - {row.employee_name}</td>
                     <td>{row.count}</td>
                   </tr>
@@ -353,7 +388,11 @@ export default function OperationsAttendanceDashboard() {
               <thead><tr><th>Funcionário</th><th>HE acumulada</th></tr></thead>
               <tbody>
                 {overtime.slice(0, 15).map((row) => (
-                  <tr key={`ot-${row.assignment_id}`} style={{ cursor: 'pointer' }} onClick={() => loadEmployeeDetail(row.employee_id)}>
+                  <tr
+                    key={`ot-${row.assignment_id}`}
+                    style={{ cursor: flags.can_view_employee_detail ? 'pointer' : 'default' }}
+                    onClick={() => (flags.can_view_employee_detail ? loadEmployeeDetail(row.employee_id) : null)}
+                  >
                     <td>{row.employee_id} - {row.employee_name}</td>
                     <td>{row.overtime_hours}h</td>
                   </tr>
@@ -368,7 +407,12 @@ export default function OperationsAttendanceDashboard() {
           {alerts.length === 0 ? <p className="inventory-empty-state">Sem alertas no filtro atual.</p> : null}
           <div style={{ display: 'grid', gap: '8px' }}>
             {alerts.slice(0, 20).map((alert) => (
-              <div key={`risk-${alert.assignment_id}`} className={alertClass(alert.level)} style={{ width: '100%', cursor: 'pointer' }} onClick={() => loadEmployeeDetail(alert.employee_id)}>
+              <div
+                key={`risk-${alert.assignment_id}`}
+                className={alertClass(alert.level)}
+                style={{ width: '100%', cursor: flags.can_view_employee_detail ? 'pointer' : 'default' }}
+                onClick={() => (flags.can_view_employee_detail ? loadEmployeeDetail(alert.employee_id) : null)}
+              >
                 <strong>{alert.employee_id} - {alert.employee_name}</strong> | {alert.actual_hours}h trabalhadas | {alert.overtime_hours}h extras
                 <br />
                 {alert.reasons.join(' | ')}
@@ -404,10 +448,14 @@ export default function OperationsAttendanceDashboard() {
               </p>
               <div className="inventory-panel-tools" style={{ marginBottom: '8px' }}>
                 <button className="inventory-secondary-button" type="button" onClick={() => window.print()} disabled={!employeeDetail || employeeDetailLoading}>Imprimir relatório</button>
-                <button className="inventory-secondary-button" type="button" onClick={exportEmployeeAttendance} disabled={!employeeDetail || employeeDetailLoading}>Exportar Excel</button>
-                <button className="inventory-secondary-button" type="button" onClick={() => setShowAdminNoteForm((current) => !current)}>Registrar observação</button>
+                {flags.can_export_attendance ? (
+                  <button className="inventory-secondary-button" type="button" onClick={exportEmployeeAttendance} disabled={!employeeDetail || employeeDetailLoading}>Exportar Excel</button>
+                ) : null}
+                {flags.can_create_admin_notes ? (
+                  <button className="inventory-secondary-button" type="button" onClick={() => setShowAdminNoteForm((current) => !current)}>Registrar observação</button>
+                ) : null}
               </div>
-              {showAdminNoteForm ? (
+              {showAdminNoteForm && flags.can_create_admin_notes ? (
                 <div className="inventory-panel" style={{ marginBottom: '8px' }}>
                   <div className="inventory-form-grid">
                     <label className="inventory-field"><span>Categoria</span><select value={adminNoteForm.category} onChange={(event) => setAdminNoteForm((current) => ({ ...current, category: event.target.value }))}><option value="assiduidade">Assiduidade</option><option value="atraso">Atraso</option><option value="falta">Falta</option><option value="horas_extras">Horas extras</option><option value="kajuuroudou">Kajuuroudou</option><option value="orientacao">Orientação</option><option value="outros">Outros</option></select></label>
@@ -421,9 +469,9 @@ export default function OperationsAttendanceDashboard() {
                 </div>
               ) : null}
 
-              <h3>Observações administrativas</h3>
-              {!employeeDetail.administrative_notes?.length ? <p className="inventory-empty-state">Sem observações registradas.</p> : null}
-              {employeeDetail.administrative_notes?.length ? (
+              {flags.can_view_admin_notes ? <h3>Observações administrativas</h3> : null}
+              {flags.can_view_admin_notes && !employeeDetail.administrative_notes?.length ? <p className="inventory-empty-state">Sem observações registradas.</p> : null}
+              {flags.can_view_admin_notes && employeeDetail.administrative_notes?.length ? (
                 <div className="inventory-table-wrap" style={{ marginBottom: '8px' }}>
                   <table className="inventory-table compact">
                     <thead><tr><th>Data</th><th>Categoria</th><th>Severidade</th><th>Observação</th><th>Autor</th></tr></thead>

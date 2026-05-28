@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
+import PermissionNotice from '../components/PermissionNotice';
 import TemplatePanel from '../components/TemplatePanel';
 import { getLocalizedName } from '../i18n/helpers';
 import { authFetch } from '../utils/authFetch';
 import OperationsLayout from './OperationsLayout';
+import { useOperationPermissions } from '../hooks/useOperationPermissions';
+import { forbiddenMessage, readonlyMessage, requestAccessMessage } from '../utils/apiErrors';
 
 import { apiUrl } from '../config/api';
 
@@ -206,6 +209,8 @@ function formatImportIgnoredReason(reason) {
 export default function OperationsCalendarGrid() {
   const { id } = useParams();
   const { i18n, t } = useTranslation();
+  const { flags, loading: permissionsLoading } = useOperationPermissions();
+  const isReadonlySchedule = flags.can_view_schedule && !flags.can_edit_schedule;
   const [calendar, setCalendar] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [cells, setCells] = useState([]);
@@ -614,6 +619,12 @@ export default function OperationsCalendarGrid() {
   const activeEmployeeOption = employeeOptions[employeeHighlightIndex] || employeeOptions[0] || null;
 
   const loadData = async () => {
+    if (!flags.can_view_schedule) {
+      setLoading(false);
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     setLoading(true);
     setIsError(false);
     let loadedCalendar = null;
@@ -728,8 +739,8 @@ export default function OperationsCalendarGrid() {
   };
 
   useEffect(() => {
-    loadData();
-  }, [id]);
+    if (!permissionsLoading) loadData();
+  }, [id, permissionsLoading, flags.can_view_schedule]);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -846,6 +857,11 @@ export default function OperationsCalendarGrid() {
 
   const addAssignment = async (event) => {
     event.preventDefault();
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!assignmentForm.employee) {
       setIsError(true);
       setStatusMessage('Selecione um funcionário para adicionar.');
@@ -897,6 +913,11 @@ export default function OperationsCalendarGrid() {
 
   const generateSchedule = async (event) => {
     event.preventDefault();
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     setGeneratingSchedule(true);
     setIsError(false);
     setStatusMessage('');
@@ -923,6 +944,11 @@ export default function OperationsCalendarGrid() {
 
   const importEmployees = async (event) => {
     event.preventDefault();
+    if (!flags.can_import_employees) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     setImportingEmployees(true);
     setIsError(false);
     setStatusMessage('');
@@ -960,6 +986,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const syncAssignmentsFromMaster = async () => {
+    if (!flags.can_sync_assignments) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (loading || syncingAssignments) return;
     const confirmed = window.confirm('Sincronizar grupo, turno, padrão, posição padrão e categoria a partir do cadastro master? As células da escala não serão alteradas.');
     if (!confirmed) return;
@@ -997,6 +1028,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const saveAssignmentEdit = async () => {
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!editingAssignment || !editingAssignmentForm) return;
     setAddingAssignment(true);
     setIsError(false);
@@ -1023,6 +1059,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const duplicateFromPreviousMonth = async () => {
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     const firstConfirm = window.confirm(
       'Duplicar mês anterior para este calendário? Funcionários e base operacional serão copiados de forma conservadora.'
     );
@@ -1074,6 +1115,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const generateNextMonth = async () => {
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     const firstConfirm = window.confirm(
       'Gerar próximo mês com base no calendário atual? Isso pode criar novo calendário e copiar a estrutura.'
     );
@@ -1166,6 +1212,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const openSaveTemplatePanel = () => {
+    if (!flags.can_manage_templates) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!calendar || isGridBusy) return;
     setShowApplyTemplatePanel(false);
     setTemplateNeedsOverwrite(false);
@@ -1176,6 +1227,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const saveAsTemplate = async () => {
+    if (!flags.can_manage_templates) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!calendar || isGridBusy || !templateName.trim()) return;
     setProcessingTemplates(true);
     setIsError(false);
@@ -1208,6 +1264,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const openApplyTemplatePanel = () => {
+    if (!flags.can_manage_templates) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!calendar || isGridBusy) return;
     setShowSaveTemplatePanel(false);
     setTemplateNeedsOverwrite(false);
@@ -1217,6 +1278,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const applyTemplate = async () => {
+    if (!flags.can_manage_templates) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!calendar || isGridBusy) return;
     if (!templates.length) {
       setStatusMessage('Nenhum template disponível.');
@@ -1330,6 +1396,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const replicateRequirement = async (mode, weekdaysOnly = false) => {
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!requirementForm.position || !requirementForm.date) {
       setIsError(true);
       setStatusMessage('Selecione posição e data para replicar.');
@@ -1367,6 +1438,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const pasteCells = async (event) => {
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     event.preventDefault();
 
     if (!selectedCell) {
@@ -1482,6 +1558,13 @@ export default function OperationsCalendarGrid() {
   };
 
   const executeCellUpdates = async (updates, { label = 'update', recordHistory = true, silent = false } = {}) => {
+    if (!flags.can_edit_schedule) {
+      if (!silent) {
+        setStatusMessage(forbiddenMessage());
+        setIsError(true);
+      }
+      return { ok: false, changedCount: 0 };
+    }
     if (!Array.isArray(updates) || updates.length === 0) return { ok: true, successCount: 0 };
     if (isGridBusy) return { ok: false, successCount: 0 };
 
@@ -1889,6 +1972,11 @@ export default function OperationsCalendarGrid() {
   };
 
   const applyPatternPreset = async (preset) => {
+    if (!flags.can_edit_schedule) {
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     if (!hasRangeSelection || !activeCell || isGridBusy) {
       setStatusMessage('Selecione um range válido');
       setIsError(true);
@@ -2562,30 +2650,34 @@ export default function OperationsCalendarGrid() {
                     {loading ? t('common.refreshing') : t('common.refresh')}
                   </button>
                 </div>
-                <div className="operations-toolbar-group">
-                  <span className="operations-toolbar-title">Operação</span>
-                  <button className="inventory-secondary-button" type="button" onClick={() => setShowImportPanel((current) => !current)}>
-                    {t('operations.importEmployees')}
-                  </button>
-                  <button className="inventory-secondary-button" type="button" onClick={() => setShowGeneratePanel((current) => !current)}>
-                    {t('operations.generateSchedule')}
-                  </button>
-                  <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openSaveTemplatePanel}>
-                    Salvar template
-                  </button>
-                  <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openApplyTemplatePanel}>
-                    Aplicar template
-                  </button>
-                </div>
-                <div className="operations-toolbar-group">
-                  <span className="operations-toolbar-title">Ciclo mensal</span>
-                  <button className="inventory-secondary-button" type="button" disabled={loading || processingMonthOps} onClick={duplicateFromPreviousMonth}>
-                    Duplicar mês anterior
-                  </button>
-                  <button className="inventory-secondary-button" type="button" disabled={loading || processingMonthOps} onClick={generateNextMonth}>
-                    Gerar próximo mês
-                  </button>
-                </div>
+                {flags.can_edit_schedule ? (
+                  <>
+                    <div className="operations-toolbar-group">
+                      <span className="operations-toolbar-title">Operação</span>
+                      <button className="inventory-secondary-button" type="button" onClick={() => setShowImportPanel((current) => !current)}>
+                        {t('operations.importEmployees')}
+                      </button>
+                      <button className="inventory-secondary-button" type="button" onClick={() => setShowGeneratePanel((current) => !current)}>
+                        {t('operations.generateSchedule')}
+                      </button>
+                      <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openSaveTemplatePanel}>
+                        Salvar template
+                      </button>
+                      <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={openApplyTemplatePanel}>
+                        Aplicar template
+                      </button>
+                    </div>
+                    <div className="operations-toolbar-group">
+                      <span className="operations-toolbar-title">Ciclo mensal</span>
+                      <button className="inventory-secondary-button" type="button" disabled={loading || processingMonthOps} onClick={duplicateFromPreviousMonth}>
+                        Duplicar mês anterior
+                      </button>
+                      <button className="inventory-secondary-button" type="button" disabled={loading || processingMonthOps} onClick={generateNextMonth}>
+                        Gerar próximo mês
+                      </button>
+                    </div>
+                  </>
+                ) : null}
                 <div className="operations-toolbar-group">
                   <span className="operations-toolbar-title">Saída / Auditoria</span>
                   <button className="inventory-secondary-button" type="button" disabled={isGridBusy} onClick={exportExcel}>
@@ -2608,6 +2700,9 @@ export default function OperationsCalendarGrid() {
 
           {statusMessage ? (
             <span className={`inventory-status ${isError ? 'error' : ''}`}>{statusMessage}</span>
+          ) : null}
+          {isReadonlySchedule ? (
+            <PermissionNotice compact title="Escala" message={`${readonlyMessage()} ${requestAccessMessage()}`} variant="warning" />
           ) : null}
 
           {showHistoryPanel ? (
@@ -2747,6 +2842,7 @@ export default function OperationsCalendarGrid() {
             />
           ) : null}
 
+          {flags.can_edit_schedule ? (
           <form className="operations-inline-form" onSubmit={addAssignment}>
             <label className="inventory-field">
               <span>{t('operations.employee')}</span>
@@ -2913,8 +3009,9 @@ export default function OperationsCalendarGrid() {
               {addingAssignment ? t('common.creating') : t('operations.addEmployee')}
             </button>
           </form>
+          ) : null}
 
-          {editingAssignment && editingAssignmentForm ? (
+          {flags.can_edit_schedule && editingAssignment && editingAssignmentForm ? (
             <div className="operations-pattern-panel" style={{ margin: '8px 18px 14px' }}>
               <label>
                 Funcionário
@@ -2973,7 +3070,7 @@ export default function OperationsCalendarGrid() {
             </div>
           ) : null}
 
-          {showGeneratePanel ? (
+          {flags.can_edit_schedule && showGeneratePanel ? (
             <form className="operations-generate-panel" onSubmit={generateSchedule}>
               <div>
                 <p className="inventory-eyebrow">{t('operations.generateSchedule')}</p>
@@ -3018,7 +3115,7 @@ export default function OperationsCalendarGrid() {
             </form>
           ) : null}
 
-          {showImportPanel ? (
+          {flags.can_edit_schedule && showImportPanel ? (
             <form className="operations-generate-panel" onSubmit={importEmployees}>
               <div>
                 <p className="inventory-eyebrow">{t('operations.importEmployees')}</p>
@@ -3170,7 +3267,7 @@ export default function OperationsCalendarGrid() {
                   <button
                     type="button"
                     className="quick-chip"
-                    disabled={!hasRangeSelection || isGridBusy}
+                    disabled={!flags.can_edit_schedule || !hasRangeSelection || isGridBusy}
                     onClick={() => setShowPatternPanel((current) => !current)}
                   >
                     Aplicar 4x2
@@ -3179,6 +3276,7 @@ export default function OperationsCalendarGrid() {
                     <button
                       type="button"
                       className="quick-chip quick-chip-clear"
+                      disabled={!flags.can_edit_schedule}
                       onClick={() =>
                         applyQuickToSelection(
                           {
@@ -3200,6 +3298,7 @@ export default function OperationsCalendarGrid() {
                       key={item.id}
                       type="button"
                       className="quick-chip"
+                      disabled={!flags.can_edit_schedule}
                       onClick={() => applyQuickToSelection({ attendance_status: String(item.id) }, { label: 'batch-status' })}
                     >
                       {item.label_jp}
@@ -3210,6 +3309,7 @@ export default function OperationsCalendarGrid() {
                       key={item.id}
                       type="button"
                       className="quick-chip"
+                      disabled={!flags.can_edit_schedule}
                       onClick={() => applyQuickToSelection({ operational_code: String(item.id) }, { label: 'batch-op-code' })}
                     >
                       {item.label_jp || item.code}
@@ -3222,7 +3322,7 @@ export default function OperationsCalendarGrid() {
                     Ctrl+Y
                   </button>
                 </div>
-                {showPatternPanel ? (
+                {flags.can_edit_schedule && showPatternPanel ? (
                   <div className="operations-pattern-panel">
                     <div className="operations-pattern-presets">
                       <button type="button" className="quick-chip" onClick={() => applyPatternPreset('4x2-day')} disabled={isGridBusy}>
@@ -3374,13 +3474,17 @@ export default function OperationsCalendarGrid() {
                         {employeeCode(assignment.employee_detail)}
                       </td>
                       <td className="sticky-col category">
-                        <button
-                          type="button"
-                          className={`quick-chip operations-category-badge is-${resolvedCategory.key}`}
-                          onClick={() => openAssignmentEditor(assignment)}
-                        >
-                          {resolvedCategory.label}
-                        </button>
+                        {flags.can_edit_schedule ? (
+                          <button
+                            type="button"
+                            className={`quick-chip operations-category-badge is-${resolvedCategory.key}`}
+                            onClick={() => openAssignmentEditor(assignment)}
+                          >
+                            {resolvedCategory.label}
+                          </button>
+                        ) : (
+                          <span className={`quick-chip operations-category-badge is-${resolvedCategory.key}`}>{resolvedCategory.label}</span>
+                        )}
                       </td>
                       <td className="sticky-col regular">{totals?.scheduled_regular_formatted || '0:00'}</td>
                       <td className="sticky-col overtime">{totals?.actual_overtime_formatted || '0:00'}</td>
@@ -3489,7 +3593,7 @@ export default function OperationsCalendarGrid() {
                                 onMouseEnter={() => updateFillDrag(assignment, day)}
                                 onMouseDown={(event) => selectCellOnly(assignment, day, { shiftKey: event.shiftKey, startDrag: true })}
                                 onClick={(event) => selectCellOnly(assignment, day, { shiftKey: event.shiftKey })}
-                                onDoubleClick={() => openCellEditor(assignment, day)}
+                                onDoubleClick={() => flags.can_edit_schedule && openCellEditor(assignment, day)}
                                 title={renderCellText(cell) || '-'}
                               >
                                 {displayLines.map((line, index) => (
@@ -3497,7 +3601,7 @@ export default function OperationsCalendarGrid() {
                                     {line}
                                   </span>
                                 ))}
-                                {isActive ? (
+                                {flags.can_edit_schedule && isActive ? (
                                   <span
                                     className="cell-fill-handle"
                                     onMouseDown={(event) => {
@@ -3523,6 +3627,11 @@ export default function OperationsCalendarGrid() {
         </div>
 
         <div className="operations-side-grid">
+          {isReadonlySchedule ? (
+            <PermissionNotice title="Escala operacional" message={`${readonlyMessage()} ${requestAccessMessage()}`} variant="info" />
+          ) : null}
+          {!flags.can_edit_schedule ? null : (
+          <>
           <div className="inventory-panel">
             <div className="inventory-panel-header">
               <div>
@@ -3905,6 +4014,8 @@ export default function OperationsCalendarGrid() {
               </div>
             )}
           </div>
+          </>
+          )}
         </div>
       </section>
     </OperationsLayout>

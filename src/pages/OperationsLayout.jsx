@@ -1,6 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../components/LanguageSelector';
+import PermissionNotice from '../components/PermissionNotice';
+import { useOperationPermissions } from '../hooks/useOperationPermissions';
+import { noOperationalModuleMessage, requestAccessMessage } from '../utils/apiErrors';
 import './Inventory.css';
 import './Operations.css';
 
@@ -8,6 +11,9 @@ export default function OperationsLayout({ children, title, subtitle, summary })
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const { role, scopes, flags } = useOperationPermissions();
+  const hasOperationalModule =
+    flags.can_view_schedule || flags.can_view_hikitsugui || flags.can_view_attendance_dashboard || flags.can_view_dashboard_tv || flags.can_view_rbac;
 
   const handleLogout = () => {
     localStorage.clear();
@@ -50,26 +56,46 @@ export default function OperationsLayout({ children, title, subtitle, summary })
         </header>
 
         <nav className="inventory-tabs" aria-label={t('operations.module')}>
-          <Link
-            className={location.pathname.startsWith('/operations/attendance-dashboard') ? 'active' : ''}
-            to="/operations/attendance-dashboard"
-          >
-            Presença
-          </Link>
+          {flags.can_view_attendance_dashboard ? (
+            <Link
+              className={location.pathname.startsWith('/operations/attendance-dashboard') ? 'active' : ''}
+              to="/operations/attendance-dashboard"
+            >
+              Presença
+            </Link>
+          ) : null}
           {/* Dashboard de produção oculto temporariamente da navegação para priorizar o painel administrativo. */}
-          <Link
-            className={location.pathname.startsWith('/operations/calendars') ? 'active' : ''}
-            to="/operations/calendars"
-          >
-            {t('operations.calendars')}
-          </Link>
-          <Link
-            className={location.pathname.startsWith('/operations/hikitsugui') ? 'active' : ''}
-            to="/operations/hikitsugui"
-          >
-            Hikitsugui
-          </Link>
+          {flags.can_view_schedule ? (
+            <Link
+              className={location.pathname.startsWith('/operations/calendars') ? 'active' : ''}
+              to="/operations/calendars"
+            >
+              {t('operations.calendars')}
+            </Link>
+          ) : null}
+          {flags.can_view_hikitsugui ? (
+            <Link
+              className={location.pathname.startsWith('/operations/hikitsugui') ? 'active' : ''}
+              to="/operations/hikitsugui"
+            >
+              Hikitsugui
+            </Link>
+          ) : null}
+          {flags.can_view_rbac ? (
+            <Link
+              className={location.pathname.startsWith('/operations/access') ? 'active' : ''}
+              to="/operations/access"
+            >
+              Acessos / RBAC
+            </Link>
+          ) : null}
         </nav>
+
+        <section className="inventory-panel" style={{ marginTop: '0.5rem' }}>
+          <small>
+            Perfil: <strong>{role || 'sem perfil'}</strong> | Escopos: <strong>{scopes?.length || 0}</strong>
+          </small>
+        </section>
 
         {summary ? (
           <section className="inventory-summary" aria-label={t('operations.module')}>
@@ -83,7 +109,15 @@ export default function OperationsLayout({ children, title, subtitle, summary })
           </section>
         ) : null}
 
-        {children}
+        {!hasOperationalModule ? (
+          <PermissionNotice
+            title="Acesso operacional"
+            message={`${noOperationalModuleMessage()} ${requestAccessMessage()}`}
+            variant="blocked"
+          />
+        ) : (
+          children
+        )}
       </main>
     </div>
   );

@@ -18,6 +18,8 @@ import OperationsCalendars from './pages/OperationsCalendars';
 import OperationsAttendanceDashboard from './pages/OperationsAttendanceDashboard';
 import OperationsDashboard from './pages/OperationsDashboard';
 import OperationsHikitsugui from './pages/OperationsHikitsugui';
+import OperationsAccessRBAC from './pages/OperationsAccessRBAC';
+import { OperationPermissionsProvider } from './hooks/useOperationPermissions';
 
 function ProtectedRoute({ children }) {
   const hasToken = Boolean(localStorage.getItem('access'));
@@ -31,7 +33,8 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
-    <Routes>
+    <OperationPermissionsProvider>
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route
@@ -170,7 +173,16 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      <Route
+        path="/operations/access"
+        element={
+          <ProtectedRoute>
+            <OperationsAccessRBAC />
+          </ProtectedRoute>
+        }
+      />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </OperationPermissionsProvider>
   );
 }

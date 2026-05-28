@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { authFetch } from '../utils/authFetch';
 import OperationsLayout from './OperationsLayout';
 import { apiUrl } from '../config/api';
+import { useOperationPermissions } from '../hooks/useOperationPermissions';
+import PermissionNotice from '../components/PermissionNotice';
+import { forbiddenMessage, readonlyMessage, requestAccessMessage } from '../utils/apiErrors';
 
 function normalizeList(data) {
   if (Array.isArray(data)) return data;
@@ -128,6 +131,7 @@ function priorityRank(priority) {
 }
 
 export default function OperationsHikitsugui() {
+  const { flags, loading: permissionsLoading } = useOperationPermissions();
   const [reports, setReports] = useState([]);
   const [calendars, setCalendars] = useState([]);
   const [processes, setProcesses] = useState([]);
@@ -220,6 +224,12 @@ export default function OperationsHikitsugui() {
   };
 
   const loadData = async () => {
+    if (!flags.can_view_hikitsugui) {
+      setLoading(false);
+      setStatusMessage(forbiddenMessage());
+      setIsError(true);
+      return;
+    }
     setLoading(true);
     setIsError(false);
 
@@ -243,16 +253,19 @@ export default function OperationsHikitsugui() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!permissionsLoading) {
+      loadData();
+    }
+  }, [permissionsLoading, flags.can_view_hikitsugui]);
 
   useEffect(() => {
     const run = async () => {
+      if (!flags.can_view_hikitsugui) return;
       const data = await loadReports();
       setReports(data);
     };
     run();
-  }, [filters.date_from, filters.date_to, filters.shift, filters.process, filters.status, filters.priority]);
+  }, [flags.can_view_hikitsugui, filters.date_from, filters.date_to, filters.shift, filters.process, filters.status, filters.priority]);
 
   const activeCalendarId = quickForm.calendar || form.calendar;
 
@@ -308,6 +321,11 @@ export default function OperationsHikitsugui() {
 
   const createReport = async (event) => {
     event.preventDefault();
+    if (!flags.can_edit_hikitsugui) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     setSubmitting(true);
     setIsError(false);
     setStatusMessage('');
@@ -343,6 +361,11 @@ export default function OperationsHikitsugui() {
 
   const createQuickReport = async (event) => {
     event.preventDefault();
+    if (!flags.can_edit_hikitsugui) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     setQuickSubmitting(true);
     setIsError(false);
     setStatusMessage('');
@@ -400,6 +423,11 @@ export default function OperationsHikitsugui() {
   };
 
   const saveSelectedReport = async () => {
+    if (!flags.can_edit_hikitsugui) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     if (!selectedReport) return;
     setSaving(true);
     setIsError(false);
@@ -438,6 +466,11 @@ export default function OperationsHikitsugui() {
   };
 
   const quickUpdateReportStatus = async (reportId, status) => {
+    if (!flags.can_edit_hikitsugui) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     setIsError(false);
     setStatusMessage('');
     const res = await authFetch(`${apiUrl(`/api/operations/hikitsugui-reports/${reportId}/`)}`, {
@@ -455,6 +488,11 @@ export default function OperationsHikitsugui() {
   };
 
   const quickUpdateItemStatus = async (itemId, status) => {
+    if (!flags.can_edit_hikitsugui) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     setIsError(false);
     setStatusMessage('');
     const res = await authFetch(`${apiUrl(`/api/operations/hikitsugui-items/${itemId}/`)}`, {
@@ -481,6 +519,11 @@ export default function OperationsHikitsugui() {
 
   const addItem = async (event) => {
     event.preventDefault();
+    if (!flags.can_edit_hikitsugui) {
+      setIsError(true);
+      setStatusMessage(forbiddenMessage());
+      return;
+    }
     if (!selectedReport) return;
     setSavingItem(true);
     setIsError(false);
@@ -648,14 +691,18 @@ export default function OperationsHikitsugui() {
                   <td>{r.area_equipment}</td>
                   <td><span className={badgeClass('category', r.__categoryCode)}>{r.__categoryLabel}</span></td>
                   <td>
-                    <select
-                      className={badgeClass('status', r.status)}
-                      value={r.status}
-                      onClick={(event) => event.stopPropagation()}
-                      onChange={(event) => quickUpdateReportStatus(r.id, event.target.value)}
-                    >
-                      {STATUS_OPTIONS.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-                    </select>
+                    {flags.can_edit_hikitsugui ? (
+                      <select
+                        className={badgeClass('status', r.status)}
+                        value={r.status}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => quickUpdateReportStatus(r.id, event.target.value)}
+                      >
+                        {STATUS_OPTIONS.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                      </select>
+                    ) : (
+                      <span className={badgeClass('status', r.status)}>{STATUS_OPTIONS.find((status) => status.value === r.status)?.label || r.status}</span>
+                    )}
                   </td>
                   <td><span className={badgeClass('priority', r.priority)}>{PRIORITY_OPTIONS.find((item) => item.value === r.priority)?.label || r.priority}</span></td>
                   <td>{r.open_items_count || 0}</td>
@@ -674,14 +721,18 @@ export default function OperationsHikitsugui() {
                   <td>{r.area_equipment}</td>
                   <td><span className={badgeClass('category', r.__categoryCode)}>{r.__categoryLabel}</span></td>
                   <td>
-                    <select
-                      className={badgeClass('status', r.status)}
-                      value={r.status}
-                      onClick={(event) => event.stopPropagation()}
-                      onChange={(event) => quickUpdateReportStatus(r.id, event.target.value)}
-                    >
-                      {STATUS_OPTIONS.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-                    </select>
+                    {flags.can_edit_hikitsugui ? (
+                      <select
+                        className={badgeClass('status', r.status)}
+                        value={r.status}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) => quickUpdateReportStatus(r.id, event.target.value)}
+                      >
+                        {STATUS_OPTIONS.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                      </select>
+                    ) : (
+                      <span className={badgeClass('status', r.status)}>{STATUS_OPTIONS.find((status) => status.value === r.status)?.label || r.status}</span>
+                    )}
                   </td>
                   <td><span className={badgeClass('priority', r.priority)}>{PRIORITY_OPTIONS.find((item) => item.value === r.priority)?.label || r.priority}</span></td>
                   <td>{r.open_items_count || 0}</td>
@@ -741,6 +792,11 @@ export default function OperationsHikitsugui() {
       </div>
 
       <div className="inventory-workspace hikitsugui-no-print" style={{ marginTop: '14px' }}>
+        {!flags.can_edit_hikitsugui ? (
+          <PermissionNotice compact title="Hikitsugui" message={`${readonlyMessage()} ${requestAccessMessage()}`} variant="info" />
+        ) : null}
+        {flags.can_edit_hikitsugui ? (
+        <>
         <div className="inventory-panel">
           <div className="inventory-panel-header"><div><p className="inventory-eyebrow">Novo registro rápido</p><h2>Lançamento mínimo</h2></div></div>
           <form className="inventory-form" onSubmit={createQuickReport}>
@@ -829,6 +885,8 @@ export default function OperationsHikitsugui() {
             <p className="inventory-empty-state">Selecione um registro na lista para editar.</p>
           )}
         </div>
+        </>
+        ) : null}
       </div>
     </OperationsLayout>
   );
