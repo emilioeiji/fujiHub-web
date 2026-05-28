@@ -51,6 +51,13 @@ export default function OperationsLayout({ children, title, subtitle, summary })
 
         <nav className="inventory-tabs" aria-label={t('operations.module')}>
           <Link
+            className={location.pathname.startsWith('/operations/attendance-dashboard') ? 'active' : ''}
+            to="/operations/attendance-dashboard"
+          >
+            Presença
+          </Link>
+          {/* Dashboard de produção oculto temporariamente da navegação para priorizar o painel administrativo. */}
+          <Link
             className={location.pathname.startsWith('/operations/calendars') ? 'active' : ''}
             to="/operations/calendars"
           >

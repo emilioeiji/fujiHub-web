@@ -439,6 +439,212 @@
   }
 }
 
+.operations-monitor-panel {
+  background: linear-gradient(180deg, #10202c 0%, #0e1a24 100%);
+  color: #e6f4ff;
+}
+
+.operations-monitor-panel .inventory-eyebrow,
+.operations-monitor-panel h2 {
+  color: #e6f4ff;
+}
+
+.operations-monitor-panel .inventory-field span {
+  color: #d1e5f5;
+}
+
+.operations-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.operations-monitor-card {
+  border: 1px solid #d7e1e8;
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.operations-monitor-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.operations-monitor-card h3 {
+  font-size: 0.95rem;
+  margin: 0;
+  color: #1f313d;
+}
+
+.operations-monitor-code {
+  margin: 6px 0;
+  color: #3f5764;
+  font-weight: 700;
+}
+
+.operations-monitor-status {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.operations-monitor-status.running {
+  background: #e8f6ea;
+  color: #17653b;
+  border-color: #bde9ca;
+}
+
+.operations-monitor-status.stopped {
+  background: #fff8e7;
+  color: #86610f;
+  border-color: #ffe5a8;
+}
+
+.operations-monitor-status.idle {
+  background: #ffecec;
+  color: #8e1f2e;
+  border-color: #ffc7cf;
+}
+
+.operations-monitor-status.error {
+  background: #f3f4f6;
+  color: #364152;
+  border-color: #cfd6de;
+}
+
+.operations-monitor-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  font-size: 0.8rem;
+  color: #2d4655;
+}
+
+.operations-monitor-alarm {
+  margin-top: 8px;
+  background: #fff1f1;
+  color: #a22222;
+  border: 1px solid #ffc8c8;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: 0.76rem;
+}
+
+.operations-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.2);
+  z-index: 35;
+}
+
+.operations-employee-drawer {
+  position: fixed;
+  top: 0;
+  right: -680px;
+  width: min(660px, 92vw);
+  height: 100vh;
+  background: #ffffff;
+  z-index: 36;
+  box-shadow: -12px 0 24px rgba(15, 23, 42, 0.18);
+  border-left: 1px solid #d7e1e8;
+  transition: right 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.operations-employee-drawer.open {
+  right: 0;
+}
+
+.operations-employee-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #d7e1e8;
+}
+
+.operations-employee-drawer-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.operations-employee-drawer-body {
+  overflow: auto;
+  padding: 12px 14px 18px;
+}
+
+.attendance-print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  .inventory-sidebar,
+  .inventory-header,
+  .inventory-tabs,
+  .inventory-summary,
+  .inventory-panel,
+  .operations-employee-drawer,
+  .operations-drawer-overlay {
+    display: none !important;
+  }
+
+  .attendance-print-only {
+    display: block !important;
+    color: #111827;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .attendance-print-only h1 {
+    font-size: 16px;
+    margin: 0 0 8px;
+  }
+
+  .attendance-print-only h2 {
+    font-size: 13px;
+    margin: 12px 0 6px;
+  }
+
+  .attendance-print-only p,
+  .attendance-print-only li {
+    margin: 2px 0;
+  }
+
+  .attendance-print-only table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+
+  .attendance-print-only th,
+  .attendance-print-only td {
+    border: 1px solid #d1d5db;
+    padding: 4px 6px;
+    vertical-align: top;
+    word-break: break-word;
+  }
+
+  .attendance-print-only tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 .day-cell-button.is-alert {
   background-color: #fff3c8;
   color: #6d4f00;

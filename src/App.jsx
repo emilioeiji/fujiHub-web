@@ -15,6 +15,8 @@ import ManagementUsers from './pages/ManagementUsers';
 import OperationsCalendarGrid from './pages/OperationsCalendarGrid';
 import OperationsCalendarPrint from './pages/OperationsCalendarPrint';
 import OperationsCalendars from './pages/OperationsCalendars';
+import OperationsAttendanceDashboard from './pages/OperationsAttendanceDashboard';
+import OperationsDashboard from './pages/OperationsDashboard';
 import OperationsHikitsugui from './pages/OperationsHikitsugui';
 
 function ProtectedRoute({ children }) {
@@ -149,6 +151,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <OperationsHikitsugui />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/attendance-dashboard"
+        element={
+          <ProtectedRoute>
+            <OperationsAttendanceDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/operations/dashboard"
+        element={
+          <ProtectedRoute>
+            <OperationsDashboard />
           </ProtectedRoute>
         }
       />
