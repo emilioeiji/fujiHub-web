@@ -625,6 +625,13 @@
   align-items: center;
 }
 
+.operations-timecard-import-panel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-style: dashed;
+  background: #f8fbfc;
+}
+
 .operations-timecard-chip {
   border-radius: 999px;
   padding: 6px 10px;

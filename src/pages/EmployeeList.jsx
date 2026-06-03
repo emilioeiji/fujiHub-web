@@ -173,6 +173,12 @@ export default function EmployeeList() {
 
   const statusBadgeClass = (isActive) => (isActive ? 'master-badge active' : 'master-badge inactive');
   const categoryBadgeClass = (category) => `master-badge category ${category || 'normal'}`;
+  const importableRows = (importResult?.creates || 0) + (importResult?.updates || 0);
+  const formatFileSize = (size) => {
+    if (!size) return '0 KB';
+    if (size < 1024 * 1024) return `${Math.ceil(size / 1024)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <section className="master-panel employee-list-panel">
@@ -269,11 +275,39 @@ export default function EmployeeList() {
         <div className="master-filter-grid">
           <label className="master-field">
             <span>Arquivo CSV (UTF-8/UTF-8 BOM)</span>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(event) => setImportFile(event.target.files?.[0] || null)}
-            />
+            <div className="master-file-picker">
+              <input
+                key={importFile ? 'employee-import-file-selected' : 'employee-import-file-empty'}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  setImportFile(event.target.files?.[0] || null);
+                  setImportResult(null);
+                  setImportError('');
+                }}
+              />
+            </div>
+            {importFile ? (
+              <div className="master-selected-file">
+                <div>
+                  <strong>{importFile.name}</strong>
+                  <span>{formatFileSize(importFile.size)}</span>
+                </div>
+                <button
+                  className="master-secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setImportFile(null);
+                    setImportResult(null);
+                    setImportError('');
+                  }}
+                >
+                  Limpar
+                </button>
+              </div>
+            ) : (
+              <p className="master-file-hint">Nenhum arquivo selecionado.</p>
+            )}
           </label>
           <label className="master-field">
             <span>Atualizar com campos vazios</span>
@@ -298,7 +332,7 @@ export default function EmployeeList() {
           <button
             className="master-primary-button"
             type="button"
-            disabled={!importFile || !importResult || importingCommit || (importResult?.errors || []).length > 0}
+            disabled={!importFile || !importResult || importingCommit || importableRows === 0}
             onClick={runImportCommit}
           >
             {importingCommit ? 'Importando...' : 'Confirmar importação'}
@@ -312,7 +346,7 @@ export default function EmployeeList() {
             </p>
             {(importResult.errors || []).length > 0 ? (
               <p className="master-empty-state" style={{ color: '#b91c1c' }}>
-                Erros: {importResult.errors.length} (corrija antes de confirmar)
+                Erros: {importResult.errors.length} linhas serão ignoradas na importação.
               </p>
             ) : null}
             {(importResult.warnings || []).length > 0 ? (

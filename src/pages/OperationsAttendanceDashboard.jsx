@@ -72,6 +72,11 @@ export default function OperationsAttendanceDashboard() {
   const [showAdminNoteForm, setShowAdminNoteForm] = useState(false);
   const [savingAdminNote, setSavingAdminNote] = useState(false);
   const [selectedTimecardIssue, setSelectedTimecardIssue] = useState(null);
+  const [showTimecardImport, setShowTimecardImport] = useState(false);
+  const [timecardImportFile, setTimecardImportFile] = useState(null);
+  const [timecardImportEncoding, setTimecardImportEncoding] = useState('cp932');
+  const [timecardImporting, setTimecardImporting] = useState(false);
+  const [timecardImportMessage, setTimecardImportMessage] = useState('');
   const [adminNoteForm, setAdminNoteForm] = useState({
     category: 'assiduidade',
     severity: 'info',
@@ -325,6 +330,41 @@ export default function OperationsAttendanceDashboard() {
     setSelectedTimecardIssue(null);
   };
 
+  const importTimecardFile = async () => {
+    if (!flags.can_import_timecard) {
+      setTimecardImportMessage(forbiddenMessage());
+      return;
+    }
+    if (!timecardImportFile) {
+      setTimecardImportMessage('Selecione um arquivo CSV/TXT do cartão ponto.');
+      return;
+    }
+    setTimecardImporting(true);
+    setTimecardImportMessage('');
+    const formData = new FormData();
+    formData.append('file', timecardImportFile);
+    formData.append('encoding', timecardImportEncoding);
+    formData.append('delimiter', 'auto');
+    if (filters.month) formData.append('month', filters.month);
+
+    const res = await authFetch(apiUrl('/api/operations/attendance-dashboard/import-timecard/'), {
+      method: 'POST',
+      body: formData,
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setTimecardImportMessage(payload.detail || 'Falha ao importar cartão ponto.');
+      setTimecardImporting(false);
+      return;
+    }
+    setTimecardImportMessage(
+      `Importado: ${payload.rows_count || 0} linhas | criados ${payload.created || 0} | atualizados ${payload.updated || 0}`
+    );
+    setTimecardImportFile(null);
+    await load();
+    setTimecardImporting(false);
+  };
+
   const saveAdministrativeNote = async () => {
     if (!flags.can_create_admin_notes) {
       setEmployeeDetailError(forbiddenMessage());
@@ -524,8 +564,49 @@ export default function OperationsAttendanceDashboard() {
               <span className="hikitsugui-badge category-neutral">Conciliados: {timecardSummary.matched_records || 0}</span>
               <span className="hikitsugui-badge category-neutral">Sem escala: {timecardSummary.unmatched_records || 0}</span>
               <span className="hikitsugui-badge priority-high">Divergências: {timecardSummary.divergences_count || 0}</span>
+              {flags.can_import_timecard ? (
+                <button className="inventory-primary-button" type="button" onClick={() => setShowTimecardImport((current) => !current)}>
+                  Importar cartão ponto
+                </button>
+              ) : null}
             </div>
           </div>
+          {showTimecardImport && flags.can_import_timecard ? (
+            <div className="inventory-panel operations-timecard-import-panel">
+              <div className="inventory-form-grid">
+                <label className="inventory-field full">
+                  <span>Arquivo CSV/TXT</span>
+                  <input
+                    key={timecardImportFile ? 'timecard-file-selected' : 'timecard-file-empty'}
+                    type="file"
+                    accept=".csv,.txt,text/csv,text/plain"
+                    onChange={(event) => setTimecardImportFile(event.target.files?.[0] || null)}
+                  />
+                </label>
+                <label className="inventory-field">
+                  <span>Encoding</span>
+                  <select value={timecardImportEncoding} onChange={(event) => setTimecardImportEncoding(event.target.value)}>
+                    <option value="cp932">CP932 / Shift_JIS</option>
+                    <option value="shift_jis">Shift_JIS</option>
+                    <option value="utf-8">UTF-8</option>
+                  </select>
+                </label>
+                <label className="inventory-field">
+                  <span>Mês</span>
+                  <input type="month" value={filters.month} onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} />
+                </label>
+              </div>
+              <div className="inventory-form-actions">
+                <button className="inventory-primary-button" type="button" onClick={importTimecardFile} disabled={timecardImporting || !timecardImportFile}>
+                  {timecardImporting ? 'Importando...' : 'Importar arquivo'}
+                </button>
+                <button className="inventory-secondary-button" type="button" onClick={() => setShowTimecardImport(false)} disabled={timecardImporting}>
+                  Fechar
+                </button>
+                {timecardImportMessage ? <span className="inventory-status">{timecardImportMessage}</span> : null}
+              </div>
+            </div>
+          ) : null}
           <div className="inventory-panel" style={{ marginTop: '10px', padding: '10px 12px' }}>
             <h3 style={{ margin: '0 0 8px' }}>Top divergências</h3>
             {topTimecardDivergences.length === 0 ? (

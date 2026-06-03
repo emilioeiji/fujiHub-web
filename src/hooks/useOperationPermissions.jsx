@@ -16,6 +16,7 @@ const DEFAULT_FLAGS = {
   can_create_admin_notes: false,
   can_edit_operations_settings: false,
   can_export_attendance: false,
+  can_import_timecard: false,
   can_view_dashboard_tv: false,
   can_view_rbac: false,
   can_edit_rbac: false,
