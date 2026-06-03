@@ -49,6 +49,80 @@ function employeeLabel(employee) {
   return employee.name_en || employee.internal_name || employee.name_jp || employee.employee_id;
 }
 
+function employeeMeta(employee) {
+  return [
+    employee.shift_detail?.label_jp || employee.shift_detail?.code || employee.shift || '',
+    employee.process_detail?.code || employee.process_detail?.label_jp || employee.process || '',
+    employee.operational_category || employee.rank || '',
+  ].filter(Boolean).join(' / ');
+}
+
+function EmployeeAutocomplete({ employees, selectedId, onSelect, placeholder }) {
+  const [query, setQuery] = useState('');
+  const selected = employees.find((employee) => String(employee.employee_id) === String(selectedId));
+  const term = query.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    if (term.length < 2) return [];
+    return employees
+      .filter((employee) =>
+        [
+          employee.employee_id,
+          employee.employee_cd,
+          employee.name_en,
+          employee.name_jp,
+          employee.name_kana,
+          employee.internal_name,
+          employee.nickname,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(term))
+      )
+      .slice(0, 8);
+  }, [employees, term]);
+
+  return (
+    <div className="ops-autocomplete">
+      <input
+        value={query || (selected ? `${selected.employee_id} - ${employeeLabel(selected)}` : '')}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          if (!event.target.value) onSelect('');
+        }}
+        onFocus={() => {
+          if (selected) setQuery('');
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && filtered[0]) {
+            event.preventDefault();
+            onSelect(filtered[0].employee_id);
+            setQuery('');
+          }
+          if (event.key === 'Escape') setQuery('');
+        }}
+        placeholder={placeholder}
+      />
+      {filtered.length > 0 ? (
+        <div className="ops-autocomplete-menu">
+          {filtered.map((employee) => (
+            <button
+              key={employee.employee_id}
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onSelect(employee.employee_id);
+                setQuery('');
+              }}
+            >
+              <strong>{employee.employee_id} - {employeeLabel(employee)}</strong>
+              <small>{employeeMeta(employee) || 'Sem turno/processo'}</small>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function canRunAction(status, action) {
   const allowed = {
     approve: ['pending'],
@@ -81,14 +155,17 @@ export default function InventoryRequests() {
 
   const summary = useMemo(() => {
     const pending = requests.filter((request) => request.status === 'pending').length;
+    const approved = requests.filter((request) => request.status === 'approved').length;
     const separated = requests.filter((request) => request.status === 'separated').length;
+    const criticalStock = items.filter((item) => Number(item.stock_quantity || 0) <= Number(item.minimum_stock || 0)).length;
 
     return [
-      { label: t('inventory.requests'), value: requests.length, detail: t('inventory.loadedRecords') },
-      { label: t('inventory.statuses.pending'), value: pending, detail: t('inventory.pendingApproval') },
-      { label: t('inventory.statuses.separated'), value: separated, detail: t('inventory.readyDelivery') },
+      { label: 'Pendentes', value: pending, detail: 'Aguardando aprovação' },
+      { label: 'Separação', value: approved, detail: 'Aprovadas para separar' },
+      { label: 'Entrega', value: separated, detail: 'Itens separados' },
+      { label: 'Estoque crítico', value: criticalStock, detail: 'Itens no mínimo' },
     ];
-  }, [requests, t]);
+  }, [requests, items]);
 
   const loadData = async () => {
     setLoading(true);
@@ -209,17 +286,20 @@ export default function InventoryRequests() {
           </div>
 
           <form className="inventory-form" onSubmit={handleSubmit}>
+            <div className="ops-workflow-steps">
+              <span className={form.employee ? 'done' : 'active'}>1. Funcionário</span>
+              <span className={form.item ? 'done' : form.employee ? 'active' : ''}>2. Item</span>
+              <span className={form.employee && form.item ? 'active' : ''}>3. Confirmar</span>
+            </div>
             <div className="inventory-form-grid">
               <label className="inventory-field full">
                 <span>{t('inventory.employee')}</span>
-                <select name="employee" value={form.employee} onChange={updateField} required>
-                  <option value="">{t('common.select')}</option>
-                  {employees.map((employee) => (
-                    <option key={employee.employee_id} value={employee.employee_id}>
-                      {employee.employee_id} - {employeeLabel(employee)}
-                    </option>
-                  ))}
-                </select>
+                <EmployeeAutocomplete
+                  employees={employees}
+                  selectedId={form.employee}
+                  placeholder="Digite matrícula, nome, nome JP ou apelido"
+                  onSelect={(employeeId) => setForm((current) => ({ ...current, employee: employeeId }))}
+                />
               </label>
 
               <label className="inventory-field">
@@ -283,6 +363,12 @@ export default function InventoryRequests() {
                 </small>
               </div>
 
+              <div className="ops-confirm-card">
+                <span>Resumo</span>
+                <strong>{form.employee ? employeeMap[form.employee] || form.employee : 'Funcionário não selecionado'}</strong>
+                <small>{selectedItem ? `${selectedItem.sku} - ${selectedItem.name} x ${form.quantity}` : 'Item não selecionado'}</small>
+              </div>
+
               <label className="inventory-field full">
                 <span>{t('common.notes')}</span>
                 <textarea name="notes" rows={3} value={form.notes} onChange={updateField} />
@@ -329,6 +415,28 @@ export default function InventoryRequests() {
           ) : requests.length === 0 ? (
             <p className="inventory-empty-state">{t('inventory.emptyRequests')}</p>
           ) : (
+            <>
+            <div className="ops-request-lane">
+              {['pending', 'approved', 'separated'].map((statusKey) => (
+                <section key={statusKey}>
+                  <strong>{t(`inventory.statuses.${statusKey}`, statusKey)}</strong>
+                  {requests.filter((request) => request.status === statusKey).slice(0, 4).map((request) => (
+                    <article key={request.id} className="ops-request-card">
+                      <div>
+                        <span className={`inventory-badge status-${request.status}`}>{t(`inventory.statuses.${request.status}`, request.status)}</span>
+                        <strong>{employeeMap[request.employee] || request.employee}</strong>
+                        <small>{request.items?.[0]?.item_detail?.sku || request.items?.[0]?.item || '-'} x {request.items?.[0]?.quantity || 0}</small>
+                      </div>
+                      <div className="inventory-row-actions">
+                        {canRunAction(request.status, 'approve') ? <button className="inventory-small-button" type="button" disabled={Boolean(actioning)} onClick={() => runAction(request.id, 'approve')}>Aprovar</button> : null}
+                        {canRunAction(request.status, 'separate') ? <button className="inventory-small-button" type="button" disabled={Boolean(actioning)} onClick={() => runAction(request.id, 'separate')}>Separar</button> : null}
+                        {canRunAction(request.status, 'deliver') ? <button className="inventory-small-button" type="button" disabled={Boolean(actioning)} onClick={() => runAction(request.id, 'deliver')}>Entregar</button> : null}
+                      </div>
+                    </article>
+                  ))}
+                </section>
+              ))}
+            </div>
             <div className="inventory-table-wrap">
               <table className="inventory-table compact">
                 <thead>
@@ -412,6 +520,7 @@ export default function InventoryRequests() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       </section>

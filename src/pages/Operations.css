@@ -621,6 +621,83 @@
   padding: 12px 14px 18px;
 }
 
+.operations-timecard-filters {
+  align-items: center;
+}
+
+.operations-timecard-chip {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.operations-timecard-chip.active {
+  background: #1f6f84;
+  color: #ffffff;
+  border-color: #1f6f84;
+}
+
+.operations-timecard-top-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.operations-timecard-top-card {
+  border: 1px solid #d7e1e8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.operations-timecard-top-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.operations-timecard-top-card.critical {
+  background: linear-gradient(180deg, #fff3f3, #ffe7e7);
+  border-color: #f0b5b5;
+}
+
+.operations-timecard-top-card.warning {
+  background: linear-gradient(180deg, #fff8e6, #fff0cd);
+  border-color: #e7c970;
+}
+
+.operations-timecard-top-card.info {
+  background: linear-gradient(180deg, #eef7ff, #e0efff);
+  border-color: #b7d4f7;
+}
+
+.operations-timecard-top-card strong {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.operations-timecard-top-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.operations-timecard-row-selected td {
+  background: #e6f3ff !important;
+}
+
+.operations-timecard-row-selected:hover td {
+  background: #d7ebff !important;
+}
+
 .attendance-print-only {
   display: none;
 }

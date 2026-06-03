@@ -264,6 +264,10 @@
   align-items: start;
 }
 
+.inventory-panel.full-width {
+  grid-column: 1 / -1;
+}
+
 .inventory-panel {
   padding: 22px;
 }
@@ -488,6 +492,16 @@
   background: #fff2cc;
 }
 
+.inventory-badge.ok {
+  color: #287245;
+  background: #e7f6ec;
+}
+
+.inventory-badge.danger {
+  color: #8f2d2d;
+  background: #f8e8e8;
+}
+
 .inventory-badge.status-pending {
   color: #946200;
   background: #fff2cc;
@@ -552,6 +566,179 @@
   color: #61717b;
 }
 
+.ops-autocomplete {
+  position: relative;
+}
+
+.ops-autocomplete input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd9df;
+  border-radius: 8px;
+  padding: 10px 11px;
+  color: #17232d;
+  background: #ffffff;
+  font: inherit;
+}
+
+.ops-autocomplete-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  border: 1px solid #cbd9df;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(31, 41, 51, 0.14);
+  overflow: hidden;
+}
+
+.ops-autocomplete-menu button {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #edf2f5;
+  background: #ffffff;
+  padding: 9px 11px;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  color: #24313a;
+}
+
+.ops-autocomplete-menu button:hover {
+  background: #f2f8f7;
+}
+
+.ops-autocomplete-menu small {
+  color: #61717b;
+}
+
+.ops-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ops-workflow-steps span {
+  border: 1px solid #dce5ea;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafb;
+  color: #61717b;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.ops-workflow-steps span.active {
+  border-color: #1f6f78;
+  background: #e8f3f1;
+  color: #185a62;
+}
+
+.ops-workflow-steps span.done {
+  border-color: #6eb184;
+  background: #e7f6ec;
+  color: #287245;
+}
+
+.ops-confirm-card,
+.ops-report-grid article,
+.ops-request-card,
+.ops-medical-card {
+  border: 1px solid #dce5ea;
+  border-radius: 8px;
+  background: #f8fafb;
+}
+
+.ops-confirm-card {
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+}
+
+.ops-confirm-card span,
+.ops-confirm-card small,
+.ops-report-grid span {
+  color: #61717b;
+}
+
+.ops-request-lane,
+.ops-medical-kanban {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ops-request-lane {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ops-medical-kanban {
+  grid-template-columns: repeat(4, minmax(190px, 1fr));
+}
+
+.ops-request-lane section,
+.ops-medical-kanban section {
+  border: 1px solid #dce5ea;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.ops-request-card,
+.ops-medical-card {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.ops-request-card > div:first-child,
+.ops-medical-card > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.ops-medical-card.severity-urgent {
+  border-color: #e7a9a9;
+  background: #fff7f7;
+}
+
+.ops-medical-card.severity-medium {
+  border-color: #ecd38d;
+  background: #fffaf0;
+}
+
+.ops-report-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ops-report-grid article {
+  min-height: 78px;
+  padding: 12px;
+  display: grid;
+  align-content: space-between;
+}
+
+.ops-master-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ops-master-tabs span {
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #e8f3f1;
+  color: #1f6f78;
+  font-weight: 850;
+}
+
 @media (max-width: 1080px) {
   .inventory-shell {
     grid-template-columns: 1fr;
@@ -577,6 +764,12 @@
   .inventory-workspace {
     grid-template-columns: 1fr;
   }
+
+  .ops-request-lane,
+  .ops-medical-kanban,
+  .ops-report-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -591,7 +784,8 @@
   .inventory-summary,
   .inventory-form-grid,
   .inventory-choice-grid,
-  .inventory-flow {
+  .inventory-flow,
+  .ops-workflow-steps {
     grid-template-columns: 1fr;
   }
 

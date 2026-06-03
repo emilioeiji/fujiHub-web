@@ -53,13 +53,25 @@ export default function MedicalLayout({ children, title, subtitle, summary }) {
             className={location.pathname === '/medical/requests' ? 'active' : ''}
             to="/medical/requests"
           >
-            {t('medical.requests')}
+            Atendimento
+          </Link>
+          <Link
+            className=""
+            to="/medical/requests"
+          >
+            Fila médica
           </Link>
           <Link
             className={location.pathname === '/medical/master-data' ? 'active' : ''}
             to="/medical/master-data"
           >
-            {t('medical.masterData')}
+            Cadastros
+          </Link>
+          <Link
+            className=""
+            to="/medical/master-data"
+          >
+            Relatórios
           </Link>
         </nav>
 

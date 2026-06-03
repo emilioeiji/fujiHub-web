@@ -58,6 +58,78 @@ function employeeLabel(employee) {
   return employee.name_en || employee.internal_name || employee.name_jp || employee.employee_id;
 }
 
+function employeeMeta(employee) {
+  return [
+    employee.shift_detail?.label_jp || employee.shift_detail?.code || employee.shift || '',
+    employee.process_detail?.code || employee.process_detail?.label_jp || employee.process || '',
+    employee.operational_category || employee.rank || '',
+  ].filter(Boolean).join(' / ');
+}
+
+function EmployeeAutocomplete({ employees, selectedId, onSelect, placeholder }) {
+  const [query, setQuery] = useState('');
+  const selected = employees.find((employee) => String(employee.employee_id) === String(selectedId));
+  const term = query.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    if (term.length < 2) return [];
+    return employees
+      .filter((employee) =>
+        [
+          employee.employee_id,
+          employee.employee_cd,
+          employee.name_en,
+          employee.name_jp,
+          employee.name_kana,
+          employee.internal_name,
+          employee.nickname,
+        ].filter(Boolean).some((value) => String(value).toLowerCase().includes(term))
+      )
+      .slice(0, 8);
+  }, [employees, term]);
+
+  return (
+    <div className="ops-autocomplete">
+      <input
+        value={query || (selected ? `${selected.employee_id} - ${employeeLabel(selected)}` : '')}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          if (!event.target.value) onSelect('');
+        }}
+        onFocus={() => {
+          if (selected) setQuery('');
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && filtered[0]) {
+            event.preventDefault();
+            onSelect(filtered[0].employee_id);
+            setQuery('');
+          }
+          if (event.key === 'Escape') setQuery('');
+        }}
+        placeholder={placeholder}
+      />
+      {filtered.length > 0 ? (
+        <div className="ops-autocomplete-menu">
+          {filtered.map((employee) => (
+            <button
+              key={employee.employee_id}
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onSelect(employee.employee_id);
+                setQuery('');
+              }}
+            >
+              <strong>{employee.employee_id} - {employeeLabel(employee)}</strong>
+              <small>{employeeMeta(employee) || 'Sem turno/processo'}</small>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function canRunAction(status, action) {
   const allowed = {
     triage: ['requested'],
@@ -90,14 +162,17 @@ export default function MedicalRequests() {
 
   const summary = useMemo(() => {
     const requested = requests.filter((request) => request.status === 'requested').length;
+    const triaged = requests.filter((request) => request.status === 'triaged').length;
+    const inProgress = requests.filter((request) => request.status === 'in_progress').length;
     const urgent = requests.filter((request) => request.severity === 'urgent').length;
 
     return [
-      { label: t('medical.requests'), value: requests.length, detail: t('medical.loadedRecords') },
-      { label: t('medical.statuses.requested'), value: requested, detail: t('medical.waitingTriage') },
-      { label: t('medical.severities.urgent'), value: urgent, detail: t('medical.operationalAttention') },
+      { label: 'Solicitados', value: requested, detail: 'Aguardando triagem' },
+      { label: 'Triados', value: triaged, detail: 'Aguardando atendimento' },
+      { label: 'Em atendimento', value: inProgress, detail: 'Em andamento' },
+      { label: 'Urgentes', value: urgent, detail: 'Atenção operacional' },
     ];
-  }, [requests, t]);
+  }, [requests]);
 
   const loadData = async () => {
     setLoading(true);
@@ -232,17 +307,21 @@ export default function MedicalRequests() {
           </div>
 
           <form className="inventory-form" onSubmit={handleSubmit}>
+            <div className="ops-workflow-steps">
+              <span className={form.employee ? 'done' : 'active'}>1. Funcionário</span>
+              <span className={form.reason ? 'done' : form.employee ? 'active' : ''}>2. Motivo</span>
+              <span className={form.severity ? 'done' : ''}>3. Gravidade</span>
+              <span className={form.employee && form.reason ? 'active' : ''}>4. Confirmar</span>
+            </div>
             <div className="inventory-form-grid">
               <label className="inventory-field full">
                 <span>{t('medical.employee')}</span>
-                <select name="employee" value={form.employee} onChange={updateField} required>
-                  <option value="">{t('common.select')}</option>
-                  {employees.map((employee) => (
-                    <option key={employee.employee_id} value={employee.employee_id}>
-                      {employee.employee_id} - {employeeLabel(employee)}
-                    </option>
-                  ))}
-                </select>
+                <EmployeeAutocomplete
+                  employees={employees}
+                  selectedId={form.employee}
+                  placeholder="Digite matrícula, nome, nome JP ou apelido"
+                  onSelect={(employeeId) => setForm((current) => ({ ...current, employee: employeeId }))}
+                />
               </label>
 
               <label className="inventory-field">
@@ -386,6 +465,33 @@ export default function MedicalRequests() {
           ) : requests.length === 0 ? (
             <p className="inventory-empty-state">{t('medical.emptyRequests')}</p>
           ) : (
+            <>
+            <div className="ops-medical-kanban">
+              {[
+                ['requested', 'Solicitado'],
+                ['triaged', 'Triado'],
+                ['in_progress', 'Em atendimento'],
+                ['completed', 'Concluído'],
+              ].map(([statusKey, label]) => (
+                <section key={statusKey}>
+                  <strong>{label}</strong>
+                  {requests.filter((request) => request.status === statusKey).slice(0, 8).map((request) => (
+                    <article key={request.id} className={`ops-medical-card severity-${request.severity}`}>
+                      <div>
+                        <span className={`inventory-badge severity-${request.severity}`}>{t(`medical.severities.${request.severity}`, request.severity)}</span>
+                        <strong>{request.employee_display?.name_en || request.employee_display?.name_jp || request.employee}</strong>
+                        <small>{getLocalizedName(request.reason_detail, i18n, request.reason)}</small>
+                      </div>
+                      <div className="inventory-row-actions">
+                        {canRunAction(request.status, 'triage') ? <button className="inventory-small-button" type="button" disabled={Boolean(actioning)} onClick={() => runAction(request.id, 'triage')}>Triar</button> : null}
+                        {canRunAction(request.status, 'start') ? <button className="inventory-small-button" type="button" disabled={Boolean(actioning)} onClick={() => runAction(request.id, 'start')}>Atender</button> : null}
+                        {canRunAction(request.status, 'complete') ? <button className="inventory-small-button" type="button" disabled={Boolean(actioning)} onClick={() => runAction(request.id, 'complete')}>Concluir</button> : null}
+                      </div>
+                    </article>
+                  ))}
+                </section>
+              ))}
+            </div>
             <div className="inventory-table-wrap">
               <table className="inventory-table compact">
                 <thead>
@@ -461,6 +567,7 @@ export default function MedicalRequests() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       </section>

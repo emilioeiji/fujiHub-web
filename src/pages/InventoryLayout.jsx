@@ -50,16 +50,28 @@ export default function InventoryLayout({ children, title, subtitle, summary }) 
 
         <nav className="inventory-tabs" aria-label={t('inventory.module')}>
           <Link
-            className={location.pathname === '/inventory/items' ? 'active' : ''}
-            to="/inventory/items"
-          >
-            {t('inventory.items')}
-          </Link>
-          <Link
             className={location.pathname === '/inventory/requests' ? 'active' : ''}
             to="/inventory/requests"
           >
-            {t('inventory.requests')}
+            Solicitações
+          </Link>
+          <Link
+            className={location.pathname === '/inventory/items' ? 'active' : ''}
+            to="/inventory/items"
+          >
+            Estoque
+          </Link>
+          <Link
+            className=""
+            to="/inventory/items"
+          >
+            Catálogo / Master
+          </Link>
+          <Link
+            className=""
+            to="/inventory/items"
+          >
+            Relatórios
           </Link>
         </nav>
 

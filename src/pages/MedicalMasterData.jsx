@@ -169,8 +169,8 @@ export default function MedicalMasterData() {
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">{t('medical.master.newRecord')}</p>
-              <h2>Master data</h2>
+              <p className="inventory-eyebrow">Cadastros</p>
+              <h2>Motivos, sintomas e destinos</h2>
             </div>
             <div className="inventory-panel-tools">
               {statusMessage ? (
@@ -280,6 +280,11 @@ export default function MedicalMasterData() {
         </div>
 
         <div className="inventory-stack">
+          <div className="ops-master-tabs">
+            <span>Motivos</span>
+            <span>Sintomas</span>
+            <span>Destinos</span>
+          </div>
           <MasterDataTable
             title={t('medical.master.reasons')}
             emptyMessage={t('medical.master.empty')}
@@ -313,6 +318,20 @@ export default function MedicalMasterData() {
               { key: 'phone', label: t('medical.master.phone') },
             ]}
           />
+        </div>
+        <div className="inventory-panel full-width">
+          <div className="inventory-panel-header">
+            <div>
+              <p className="inventory-eyebrow">Relatórios</p>
+              <h2>Indicadores iniciais</h2>
+            </div>
+          </div>
+          <div className="ops-report-grid">
+            <article><span>Atendimentos por setor</span><strong>Em preparação</strong></article>
+            <article><span>Sintomas recorrentes</span><strong>{symptoms.length}</strong></article>
+            <article><span>Acidentes</span><strong>Filtro futuro</strong></article>
+            <article><span>Urgências</span><strong>Fila médica</strong></article>
+          </div>
         </div>
       </section>
     </MedicalLayout>

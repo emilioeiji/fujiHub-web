@@ -17,6 +17,35 @@ function alertClass(level) {
   return 'hikitsugui-badge priority-high';
 }
 
+function timecardAlertClass(level) {
+  if (level === 'critical') return 'operations-monitor-alarm';
+  if (level === 'warning') return 'hikitsugui-badge priority-high';
+  return 'hikitsugui-badge category-neutral';
+}
+
+function timecardFilterButtonClass(active) {
+  return `inventory-secondary-button operations-timecard-chip${active ? ' active' : ''}`;
+}
+
+function formatHours(value) {
+  const numeric = Number(value ?? 0);
+  if (Number.isNaN(numeric)) return '-';
+  return `${numeric.toFixed(2)}h`;
+}
+
+function timecardTypeLabel(type) {
+  const labels = {
+    missing_timecard: 'Sem ponto',
+    worked_on_day_off: 'Trabalho em folga',
+    late: 'Atraso',
+    early_leave: 'Saída antecipada',
+    overtime_mismatch: 'HE divergente',
+    work_minutes_mismatch: 'Jornada divergente',
+    timecard_without_calendar_cell: 'Sem célula na escala',
+  };
+  return labels[type] || type || '-';
+}
+
 function csvEscape(value) {
   const text = String(value ?? '');
   if (text.includes('"') || text.includes(',') || text.includes('\n')) {
@@ -42,6 +71,7 @@ export default function OperationsAttendanceDashboard() {
   const [isEmployeeDrawerOpen, setIsEmployeeDrawerOpen] = useState(false);
   const [showAdminNoteForm, setShowAdminNoteForm] = useState(false);
   const [savingAdminNote, setSavingAdminNote] = useState(false);
+  const [selectedTimecardIssue, setSelectedTimecardIssue] = useState(null);
   const [adminNoteForm, setAdminNoteForm] = useState({
     category: 'assiduidade',
     severity: 'info',
@@ -114,13 +144,69 @@ export default function OperationsAttendanceDashboard() {
       { label: 'HE semana', value: `${k.overtime_week_hours || 0}h`, detail: 'Horas extras semanais' },
       { label: 'HE mês', value: `${k.overtime_month_hours || 0}h`, detail: 'Horas extras mensais' },
       { label: 'Em risco', value: k.risk_people || 0, detail: 'Pessoas com alertas' },
+      { label: 'Divergências cartão ponto', value: data?.timecard_summary?.divergences_count || 0, detail: 'Diferenças ponto x escala' },
     ];
   }, [data]);
 
   const rankings = data?.employee_rankings || {};
   const overtime = data?.overtime_summary?.by_employee || [];
   const alerts = data?.risk_alerts || [];
+  const timecardSummary = data?.timecard_summary || {};
+  const timecardDivergences = data?.timecard_divergences || [];
+  const [timecardTypeFilter, setTimecardTypeFilter] = useState('all');
   const activeSettings = data?.settings || settingsForm;
+
+  const timecardFilterOptions = useMemo(() => {
+    const base = [
+      { key: 'all', label: 'Todas', types: [] },
+      { key: 'missing_timecard', label: 'Sem ponto', types: ['missing_timecard'] },
+      { key: 'worked_on_day_off', label: 'Trabalhou na folga', types: ['worked_on_day_off'] },
+      { key: 'late', label: 'Atraso', types: ['late'] },
+      { key: 'early_leave', label: 'Saída antecipada', types: ['early_leave'] },
+      { key: 'overtime_mismatch', label: 'HE divergente', types: ['overtime_mismatch'] },
+      { key: 'work_minutes_mismatch', label: 'Jornada divergente', types: ['work_minutes_mismatch'] },
+      { key: 'timecard_without_calendar_cell', label: 'Ponto sem escala', types: ['timecard_without_calendar_cell'] },
+    ];
+    const counts = timecardDivergences.reduce((acc, item) => {
+      const key = item.type || 'unknown';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    return base.map((item) => {
+      const count = item.key === 'all' ? timecardDivergences.length : (counts[item.key] || 0);
+      return { ...item, count };
+    });
+  }, [timecardDivergences]);
+
+  const filteredTimecardDivergences = useMemo(() => {
+    if (timecardTypeFilter === 'all') return timecardDivergences;
+    return timecardDivergences.filter((item) => item.type === timecardTypeFilter);
+  }, [timecardDivergences, timecardTypeFilter]);
+
+  const topTimecardDivergences = useMemo(() => {
+    const counts = timecardDivergences.reduce((acc, item) => {
+      const key = item.type || 'unknown';
+      if (!acc[key]) {
+        acc[key] = { type: key, count: 0, severity: item.severity || 'info' };
+      }
+      acc[key].count += 1;
+      if (item.severity === 'critical') {
+        acc[key].severity = 'critical';
+      } else if (item.severity === 'warning' && acc[key].severity !== 'critical') {
+        acc[key].severity = 'warning';
+      }
+      return acc;
+    }, {});
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  }, [timecardDivergences]);
+
+  const timecardTopDivergenceClass = (severity) => {
+    if (severity === 'critical') return 'operations-timecard-top-card critical';
+    if (severity === 'warning') return 'operations-timecard-top-card warning';
+    return 'operations-timecard-top-card info';
+  };
 
   const saveSettings = async () => {
     if (!flags.can_edit_operations_settings) {
@@ -152,13 +238,14 @@ export default function OperationsAttendanceDashboard() {
     setSavingSettings(false);
   };
 
-  const loadEmployeeDetail = async (employeeId) => {
+  const loadEmployeeDetail = async (employeeId, issue = null) => {
     if (!flags.can_view_employee_detail) {
       setStatusMessage(forbiddenMessage());
       return;
     }
     if (!employeeId) return;
     setSelectedEmployeeId(employeeId);
+    setSelectedTimecardIssue(issue);
     setIsEmployeeDrawerOpen(true);
     setEmployeeDetailLoading(true);
     setEmployeeDetailError('');
@@ -233,6 +320,11 @@ export default function OperationsAttendanceDashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const closeEmployeeDrawer = () => {
+    setIsEmployeeDrawerOpen(false);
+    setSelectedTimecardIssue(null);
+  };
+
   const saveAdministrativeNote = async () => {
     if (!flags.can_create_admin_notes) {
       setEmployeeDetailError(forbiddenMessage());
@@ -267,7 +359,7 @@ export default function OperationsAttendanceDashboard() {
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
-        setIsEmployeeDrawerOpen(false);
+        closeEmployeeDrawer();
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -421,13 +513,109 @@ export default function OperationsAttendanceDashboard() {
           </div>
         </article>
 
+        <article className="inventory-panel">
+          <div className="inventory-panel-header" style={{ alignItems: 'center' }}>
+            <div>
+              <p className="inventory-eyebrow">Ponto x escala</p>
+              <h2>Cartão ponto x Escala</h2>
+            </div>
+            <div className="inventory-panel-tools" style={{ gap: '8px', flexWrap: 'wrap' }}>
+              <span className="hikitsugui-badge category-neutral">Registros: {timecardSummary.total_records || 0}</span>
+              <span className="hikitsugui-badge category-neutral">Conciliados: {timecardSummary.matched_records || 0}</span>
+              <span className="hikitsugui-badge category-neutral">Sem escala: {timecardSummary.unmatched_records || 0}</span>
+              <span className="hikitsugui-badge priority-high">Divergências: {timecardSummary.divergences_count || 0}</span>
+            </div>
+          </div>
+          <div className="inventory-panel" style={{ marginTop: '10px', padding: '10px 12px' }}>
+            <h3 style={{ margin: '0 0 8px' }}>Top divergências</h3>
+            {topTimecardDivergences.length === 0 ? (
+              <p className="inventory-empty-state" style={{ margin: 0 }}>Sem divergências no período.</p>
+            ) : (
+              <div className="operations-timecard-top-grid">
+                {topTimecardDivergences.map((item) => (
+                  <button
+                    key={item.type}
+                    type="button"
+                    className={timecardTopDivergenceClass(item.severity)}
+                    onClick={() => setTimecardTypeFilter(item.type)}
+                  >
+                    <div className="operations-timecard-top-card-title">
+                      <span>{timecardTypeLabel(item.type)}</span>
+                      <span className={`hikitsugui-badge ${item.severity === 'critical' ? 'priority-high' : item.severity === 'warning' ? 'priority-normal' : 'category-neutral'}`}>
+                        {item.severity}
+                      </span>
+                    </div>
+                    <strong>{item.count}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="inventory-panel-tools operations-timecard-filters" style={{ marginTop: '8px', gap: '8px', flexWrap: 'wrap' }}>
+            {timecardFilterOptions.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className={timecardFilterButtonClass(timecardTypeFilter === option.key)}
+                onClick={() => setTimecardTypeFilter(option.key)}
+              >
+                {option.label} ({option.count})
+              </button>
+            ))}
+          </div>
+          {filteredTimecardDivergences.length === 0 ? <p className="inventory-empty-state">Sem divergências de cartão ponto no filtro atual.</p> : null}
+          {filteredTimecardDivergences.length ? (
+            <div className="inventory-table-wrap">
+              <table className="inventory-table compact">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Funcionário</th>
+                    <th>Tipo</th>
+                    <th>Esperado</th>
+                    <th>Real</th>
+                    <th>Mensagem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTimecardDivergences.slice(0, 20).map((item, index) => (
+                    <tr
+                      key={`timecard-${item.employee_code || 'x'}-${item.date || index}-${item.type || index}`}
+                      className={selectedTimecardIssue?.date === item.date && selectedTimecardIssue?.type === item.type ? 'operations-timecard-row-selected' : ''}
+                      style={{ cursor: flags.can_view_employee_detail && item.employee_id ? 'pointer' : 'default' }}
+                      onClick={() => {
+                        if (flags.can_view_employee_detail && item.employee_id) {
+                          loadEmployeeDetail(item.employee_id, { date: item.date, type: item.type });
+                        }
+                      }}
+                    >
+                      <td>{String(item.date || '').slice(0, 10)}</td>
+                      <td>
+                        <strong>{item.employee_id || item.employee_code || '-'}</strong>
+                        <br />
+                        <span>{item.employee_name || '-'}</span>
+                      </td>
+                      <td>
+                        <span className={timecardAlertClass(item.severity)}>{timecardTypeLabel(item.type)}</span>
+                      </td>
+                      <td>{item.expected || '-'}</td>
+                      <td>{item.actual || '-'}</td>
+                      <td>{item.message || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </article>
+
       </section>
 
-      {isEmployeeDrawerOpen ? <div className="operations-drawer-overlay" onClick={() => setIsEmployeeDrawerOpen(false)} /> : null}
+      {isEmployeeDrawerOpen ? <div className="operations-drawer-overlay" onClick={closeEmployeeDrawer} /> : null}
       <aside className={`operations-employee-drawer ${isEmployeeDrawerOpen ? 'open' : ''}`}>
         <div className="operations-employee-drawer-header">
           <h2>Visão individual</h2>
-          <button className="inventory-secondary-button" type="button" onClick={() => setIsEmployeeDrawerOpen(false)}>Fechar</button>
+          <button className="inventory-secondary-button" type="button" onClick={closeEmployeeDrawer}>Fechar</button>
         </div>
 
         <div className="operations-employee-drawer-body">
@@ -489,6 +677,47 @@ export default function OperationsAttendanceDashboard() {
                   </table>
                 </div>
               ) : null}
+              <h3>Cartão ponto</h3>
+              {employeeDetail.timecard_records?.length ? (
+                <div className="inventory-table-wrap" style={{ marginBottom: '8px' }}>
+                  <table className="inventory-table compact">
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Entrada</th>
+                        <th>Saída</th>
+                        <th>Total</th>
+                        <th>HE</th>
+                        <th>Atraso</th>
+                        <th>Saída antecipada</th>
+                        <th>Divergência</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {employeeDetail.timecard_records.map((row) => (
+                        <tr key={`timecard-row-${row.date}-${row.clock_in || ''}-${row.clock_out || ''}`}>
+                          <td>{String(row.date || '').slice(0, 10)}</td>
+                          <td>{row.clock_in || '-'}</td>
+                          <td>{row.clock_out || '-'}</td>
+                          <td>{formatHours(row.total_work_hours)}</td>
+                          <td>{formatHours(row.overtime_hours)}</td>
+                          <td>{row.late_minutes ? `${row.late_minutes}m` : '-'}</td>
+                          <td>{row.early_leave_minutes ? `${row.early_leave_minutes}m` : '-'}</td>
+                          <td>
+                            {row.divergence_message ? (
+                              <span className={timecardAlertClass(row.divergence_severity)}>{row.divergence_message}</span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="inventory-empty-state">Sem registros de ponto no período.</p>
+              )}
               {employeeDetail.risk_alerts?.length ? (
                 <div style={{ display: 'grid', gap: '6px', marginBottom: '8px' }}>
                   {employeeDetail.risk_alerts.map((item) => (
@@ -546,6 +775,45 @@ export default function OperationsAttendanceDashboard() {
               </ul>
             ) : (
               <p>Sem alertas no período.</p>
+            )}
+          </section>
+
+          <section>
+            <h2>Cartão ponto</h2>
+            {employeeDetail.timecard_records?.length ? (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                    <th>Total</th>
+                    <th>HE</th>
+                    <th>Atraso</th>
+                    <th>Saída antecipada</th>
+                    <th>Divergência</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employeeDetail.timecard_records.map((row) => (
+                    <tr
+                      key={`print-timecard-${row.date}-${row.clock_in || ''}-${row.clock_out || ''}`}
+                      className={selectedTimecardIssue?.date === row.date ? 'operations-timecard-row-selected' : ''}
+                    >
+                      <td>{String(row.date || '').slice(0, 10)}</td>
+                      <td>{row.clock_in || '-'}</td>
+                      <td>{row.clock_out || '-'}</td>
+                      <td>{formatHours(row.total_work_hours)}</td>
+                      <td>{formatHours(row.overtime_hours)}</td>
+                      <td>{row.late_minutes ? `${row.late_minutes}m` : '-'}</td>
+                      <td>{row.early_leave_minutes ? `${row.early_leave_minutes}m` : '-'}</td>
+                      <td>{row.divergence_message || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>Sem registros de ponto no período.</p>
             )}
           </section>
 

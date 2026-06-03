@@ -139,6 +139,13 @@ export default function InventoryItems() {
 
   const categoryName = (item) => getLocalizedLabel(item.category_detail, i18n, item.category || '-');
   const isSubmitDisabled = submitting || loading || categories.length === 0;
+  const stockStatus = (item) => {
+    const current = Number(item.stock_quantity || 0);
+    const minimum = Number(item.minimum_stock || 0);
+    if (current <= 0) return { label: 'Crítico', className: 'danger' };
+    if (current <= minimum) return { label: 'Baixo', className: 'warning' };
+    return { label: 'OK', className: 'ok' };
+  };
 
   return (
     <InventoryLayout
@@ -150,8 +157,8 @@ export default function InventoryItems() {
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">{t('inventory.newItem')}</p>
-              <h2>{t('inventory.itemForm')}</h2>
+              <p className="inventory-eyebrow">Catálogo / Master</p>
+              <h2>Cadastro técnico de uniformes</h2>
             </div>
             {statusMessage ? (
               <span className={`inventory-status ${isError ? 'error' : ''}`}>{statusMessage}</span>
@@ -243,8 +250,8 @@ export default function InventoryItems() {
         <div className="inventory-panel">
           <div className="inventory-panel-header">
             <div>
-              <p className="inventory-eyebrow">{t('inventory.stock')}</p>
-              <h2>{t('inventory.registeredItems')}</h2>
+              <p className="inventory-eyebrow">Estoque</p>
+              <h2>Saldo operacional</h2>
             </div>
             <div className="inventory-panel-tools">
               <button
@@ -275,6 +282,7 @@ export default function InventoryItems() {
                     <th>{t('inventory.color')}</th>
                     <th>{t('inventory.stock')}</th>
                     <th>{t('inventory.minimumStock')}</th>
+                    <th>Status</th>
                     <th>{t('inventory.cost')}</th>
                     <th>{t('inventory.averageCost')}</th>
                     <th>{t('inventory.averagePrice')}</th>
@@ -298,6 +306,11 @@ export default function InventoryItems() {
                         </span>
                       </td>
                       <td>{item.minimum_stock}</td>
+                      <td>
+                        <span className={`inventory-badge ${stockStatus(item).className}`}>
+                          {stockStatus(item).label}
+                        </span>
+                      </td>
                       <td>{item.unit_cost}</td>
                       <td>{item.average_cost}</td>
                       <td>{item.average_price}</td>
@@ -307,6 +320,20 @@ export default function InventoryItems() {
               </table>
             </div>
           )}
+        </div>
+        <div className="inventory-panel full-width">
+          <div className="inventory-panel-header">
+            <div>
+              <p className="inventory-eyebrow">Relatórios</p>
+              <h2>Indicadores iniciais</h2>
+            </div>
+          </div>
+          <div className="ops-report-grid">
+            <article><span>Consumo por setor</span><strong>Em preparação</strong></article>
+            <article><span>Custo mensal</span><strong>{items.reduce((sum, item) => sum + Number(item.stock_quantity || 0) * Number(item.unit_cost || 0), 0).toFixed(2)}</strong></article>
+            <article><span>Itens críticos</span><strong>{items.filter((item) => stockStatus(item).className !== 'ok').length}</strong></article>
+            <article><span>Doações</span><strong>Histórico futuro</strong></article>
+          </div>
         </div>
       </section>
     </InventoryLayout>
